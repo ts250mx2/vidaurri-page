@@ -2,13 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Marca, Modelo, TipoParte } from "@/lib/catalogo";
 import { slugificar } from "@/lib/slug";
 
-// Filtros del catalogo de nuevas (rail desktop y <details> movil). Al aplicar
-// navega a la URL semantica del contrato: /refacciones/marca/modelo/año/tipo
+// Filtros del catálogo de nuevas (rail de escritorio y <details> en móvil). Al
+// aplicar navega a la URL semántica del contrato: /refacciones/marca/modelo/año/tipo
 // por slug, con texto/existencia en el querystring (y `parte` como query solo
 // cuando hay tipo elegido sin marca, porque el path exige marca primero).
+//
+// Los campos son casillas del cajetín: fondo de papel, filete de plano y la
+// etiqueta rotulada arriba. 16px de tipo como mínimo: en iOS un campo más chico
+// hace que el navegador se acerque solo, y aquí se llena con una mano.
 
 export interface FiltrosIniciales {
   marcaId?: number;
@@ -20,8 +25,10 @@ export interface FiltrosIniciales {
 }
 
 const CLASE_CAMPO =
-  "h-12 w-full rounded-lg border border-borde bg-fondo px-3 text-base text-tinta transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45";
-const CLASE_ETIQUETA = "rotulo mb-1.5 block text-tinta-suave";
+  "h-12 w-full rounded-md border border-linea bg-papel px-3 text-base text-tinta transition-colors duration-150 hover:border-linea-fuerte focus:border-tinta disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-linea";
+
+const CLASE_ETIQUETA =
+  "mb-1.5 block font-display text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-tinta-suave";
 
 export function PanelFiltros({
   marcas,
@@ -45,8 +52,8 @@ export function PanelFiltros({
   const [anios, setAnios] = useState<number[]>([]);
   const [aplicando, setAplicando] = useState(false);
 
-  // Modelos de la marca elegida (tambien al montar con marca inicial). El
-  // reset de modelo/año vive en los onChange, no aqui, para no pisar los
+  // Modelos de la marca elegida (también al montar con marca inicial). El
+  // reset de modelo/año vive en los onChange, no aquí, para no pisar los
   // valores iniciales que llegan de la URL.
   useEffect(() => {
     if (!marcaId) {
@@ -108,6 +115,14 @@ export function PanelFiltros({
     );
   }
 
+  const hayFiltros =
+    marcaId > 0 ||
+    modeloId > 0 ||
+    anio > 0 ||
+    parteId > 0 ||
+    texto.trim() !== "" ||
+    soloExistencia;
+
   return (
     <form
       aria-label="Filtros del catálogo"
@@ -160,7 +175,9 @@ export function PanelFiltros({
           disabled={!marcaId || modelos.length === 0}
           className={CLASE_CAMPO}
         >
-          <option value={0}>Todos los modelos</option>
+          <option value={0}>
+            {marcaId ? "Todos los modelos" : "Elige marca primero"}
+          </option>
           {modelos.map((m) => (
             <option key={m.id} value={m.id}>
               {m.modelo}
@@ -177,7 +194,9 @@ export function PanelFiltros({
           disabled={!modeloId || anios.length === 0}
           className={CLASE_CAMPO}
         >
-          <option value={0}>Todos los años</option>
+          <option value={0}>
+            {modeloId ? "Todos los años" : "Elige modelo primero"}
+          </option>
           {anios.map((a) => (
             <option key={a} value={a}>
               {a}
@@ -202,12 +221,12 @@ export function PanelFiltros({
         </select>
       </label>
 
-      <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-borde bg-fondo px-3 py-3 text-sm font-semibold">
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-md border border-linea bg-papel px-3 py-3 text-sm font-semibold transition-colors duration-150 hover:border-linea-fuerte">
         <input
           type="checkbox"
           checked={soloExistencia}
           onChange={(e) => setSoloExistencia(e.target.checked)}
-          className="size-4 accent-exito"
+          className="size-4 accent-existencia"
         />
         Solo con existencia
       </label>
@@ -215,10 +234,19 @@ export function PanelFiltros({
       <button
         type="submit"
         disabled={aplicando}
-        className="h-12 rounded-lg bg-ambar px-5 font-display text-sm font-bold uppercase tracking-wide text-grafito transition-colors duration-150 hover:bg-ambar-press hover:text-white disabled:opacity-60"
+        className="rotulo-tecnico h-12 rounded-md bg-ambar px-5 text-sm text-plano-hondo transition-colors duration-150 hover:bg-ambar-press active:bg-ambar-press disabled:opacity-60"
       >
         {aplicando ? "Aplicando…" : "Aplicar filtros"}
       </button>
+
+      {hayFiltros && (
+        <Link
+          href="/refacciones"
+          className="inline-flex min-h-11 items-center justify-center text-[13px] font-semibold text-tinta-suave underline-offset-4 transition-colors duration-150 hover:text-tinta hover:underline"
+        >
+          Quitar todos los filtros
+        </Link>
+      )}
     </form>
   );
 }

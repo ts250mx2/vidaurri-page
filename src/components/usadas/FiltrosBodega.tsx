@@ -1,14 +1,21 @@
+import Link from "next/link";
 import type { MarcaUsadas, ParteUsadas } from "@/lib/usadas";
 
-// Filtros del catalogo de usadas SIN JavaScript: un <form method="GET">
-// server-rendered que recarga /usadas con el querystring (marca, parte,
-// texto, anio). Los valores actuales llegan de searchParams y se preseleccionan
-// con defaultValue. Al enviar, `pagina` se resetea sola (no viaja en el form).
+// Filtros de la bodega de usado SIN JavaScript: un <form method="GET">
+// renderizado en servidor que recarga /usadas con el querystring (marca,
+// parte, texto, año). Los valores actuales llegan de searchParams y se
+// preseleccionan con defaultValue. Al enviar, `pagina` se resetea sola porque
+// no viaja en el formulario.
+//
+// Es el renglón de búsqueda del cajetín: casillas sobre papel, etiqueta
+// rotulada arriba y 16px de tipo como mínimo (menos que eso hace que iOS se
+// acerque solo al tocar el campo).
 
 const ESTILO_CAMPO =
-  "h-12 w-full rounded-lg border border-borde bg-fondo px-3 text-base text-tinta transition-colors duration-150";
+  "h-12 w-full rounded-md border border-linea bg-papel px-3 text-base text-tinta transition-colors duration-150 hover:border-linea-fuerte focus:border-tinta";
 
-const ESTILO_ETIQUETA = "rotulo mb-1.5 block text-tinta-suave";
+const ESTILO_ETIQUETA =
+  "mb-1.5 block font-display text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-tinta-suave";
 
 export function FiltrosBodega({
   marcas,
@@ -20,12 +27,16 @@ export function FiltrosBodega({
   /** Valores actuales del querystring, ya normalizados ("" si no hay). */
   valores: { marca: string; parte: string; texto: string; anio: string };
 }) {
+  const hayFiltros = Boolean(
+    valores.marca || valores.parte || valores.texto || valores.anio
+  );
+
   return (
     <form
       method="GET"
       action="/usadas"
       aria-label="Filtros de piezas usadas"
-      className="carta p-5"
+      className="lamina p-5"
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
         <div className="lg:col-span-3">
@@ -93,17 +104,28 @@ export function FiltrosBodega({
             max={2099}
             defaultValue={valores.anio}
             placeholder="2018"
-            className={ESTILO_CAMPO}
+            className={`${ESTILO_CAMPO} num-tab font-mono`}
           />
         </div>
 
         <button
           type="submit"
-          className="h-12 rounded-lg bg-ambar px-4 font-display text-sm font-bold uppercase tracking-wide text-grafito transition-colors duration-150 hover:bg-ambar-press hover:text-white lg:col-span-2"
+          className="rotulo-tecnico h-12 rounded-md bg-ambar px-4 text-sm text-plano-hondo transition-colors duration-150 hover:bg-ambar-press active:bg-ambar-press lg:col-span-2"
         >
           Buscar
         </button>
       </div>
+
+      {hayFiltros && (
+        <p className="mt-3">
+          <Link
+            href="/usadas"
+            className="inline-flex min-h-11 items-center text-[13px] font-semibold text-tinta-suave underline-offset-4 transition-colors duration-150 hover:text-tinta hover:underline"
+          >
+            Quitar todos los filtros
+          </Link>
+        </p>
+      )}
     </form>
   );
 }

@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font-size",
+        "value": "3.2rem",
+        "createdAt": "2026-08-17T08:24:55.400Z",
+        "reason": "El cliente fijó este tamaño de titular editando Hero.tsx por su cuenta; es su decisión de diseño, no drift. DESIGN.md describe el mundo azul anterior y esta en revision."
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "src/app/globals.css"
+        ],
+        "createdAt": "2026-08-17T08:25:17.196Z",
+        "reason": "Unica reticula restante: .mesa-dibujo, la superficie de apoyo bajo fotos de producto recortadas sobre blanco (sin ella la pieza flota en el vacio). Es el caso measurement surface que la propia regla exceptua. Las 9 decorativas se eliminaron en esta sesion."
+      }
+    ]
+  }
+}

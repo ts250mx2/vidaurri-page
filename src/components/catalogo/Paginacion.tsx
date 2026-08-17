@@ -1,16 +1,25 @@
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-// Paginacion numerada SSR del catalogo: enlaces reales (rastreables) que
-// conservan el path semantico y el querystring, con `pagina` como parametro.
-// La pagina 1 omite `pagina` para mantener la URL canonica.
+// Paginación numerada SSR del catálogo: enlaces reales (rastreables) que
+// conservan el path semántico y el querystring, con `pagina` como parámetro.
+// La página 1 omite `pagina` para mantener la URL canónica.
+//
+// Los números van en mono con cifras tabulares —son cotas, no texto— y las
+// flechas son iconos de verdad, no glifos. La página actual se marca con el
+// campo azul lleno: en el plano, lo que está resuelto va en tinta.
 
 const CLASE_BASE =
-  "inline-flex h-11 min-w-11 items-center justify-center rounded-lg px-3.5 font-mono text-sm num-tab transition-colors duration-150";
-const CLASE_ENLACE = `${CLASE_BASE} border border-borde bg-superficie text-tinta hover:border-grafito hover:bg-grafito hover:text-white`;
-const CLASE_ACTUAL = `${CLASE_BASE} border border-grafito bg-grafito font-semibold text-white`;
-const CLASE_INACTIVO = `${CLASE_BASE} border border-borde bg-superficie text-tinta-suave opacity-45`;
+  "inline-flex h-11 items-center justify-center gap-1.5 rounded-md border transition-colors duration-150";
+const CLASE_TONO =
+  "border-linea bg-hoja text-tinta hover:border-tinta hover:bg-plano hover:text-white";
 
-/** Ventana de numeros con elipsis: 1 … n-1 [n] n+1 … total. */
+const CLASE_NUM = `${CLASE_BASE} ${CLASE_TONO} num-tab min-w-11 px-3 font-mono text-sm`;
+const CLASE_NUM_ACTUAL = `${CLASE_BASE} num-tab min-w-11 border-tinta bg-plano px-3 font-mono text-sm font-semibold text-white`;
+const CLASE_NAV = `${CLASE_BASE} ${CLASE_TONO} rotulo-tecnico px-3.5 text-[13px]`;
+const CLASE_NAV_INACTIVO = `${CLASE_BASE} rotulo-tecnico border-linea bg-hoja px-3.5 text-[13px] text-tinta-suave opacity-50`;
+
+/** Ventana de números con elipsis: 1 … n-1 [n] n+1 … total. */
 function paginasVisibles(actual: number, total: number): Array<number | "salto"> {
   const numeros: number[] = [];
   for (let p = 1; p <= total; p++) {
@@ -51,15 +60,17 @@ export function Paginacion({
   return (
     <nav
       aria-label="Paginación del catálogo"
-      className="mt-8 flex flex-wrap items-center justify-center gap-1.5"
+      className="mt-10 flex flex-wrap items-center justify-center gap-1.5 border-t border-linea pt-6"
     >
       {pagina > 1 ? (
-        <Link rel="prev" href={hrefDe(pagina - 1)} className={CLASE_ENLACE}>
-          ‹ Anterior
+        <Link rel="prev" href={hrefDe(pagina - 1)} className={CLASE_NAV}>
+          <ChevronLeft aria-hidden className="size-4" />
+          Anterior
         </Link>
       ) : (
-        <span aria-disabled="true" className={CLASE_INACTIVO}>
-          ‹ Anterior
+        <span aria-disabled="true" className={CLASE_NAV_INACTIVO}>
+          <ChevronLeft aria-hidden className="size-4" />
+          Anterior
         </span>
       )}
 
@@ -69,7 +80,7 @@ export function Paginacion({
             …
           </span>
         ) : el === pagina ? (
-          <span key={el} aria-current="page" className={CLASE_ACTUAL}>
+          <span key={el} aria-current="page" className={CLASE_NUM_ACTUAL}>
             {el}
           </span>
         ) : (
@@ -77,7 +88,7 @@ export function Paginacion({
             key={el}
             href={hrefDe(el)}
             aria-label={`Ir a la página ${el}`}
-            className={CLASE_ENLACE}
+            className={CLASE_NUM}
           >
             {el}
           </Link>
@@ -85,12 +96,14 @@ export function Paginacion({
       )}
 
       {pagina < totalPaginas ? (
-        <Link rel="next" href={hrefDe(pagina + 1)} className={CLASE_ENLACE}>
-          Siguiente ›
+        <Link rel="next" href={hrefDe(pagina + 1)} className={CLASE_NAV}>
+          Siguiente
+          <ChevronRight aria-hidden className="size-4" />
         </Link>
       ) : (
-        <span aria-disabled="true" className={CLASE_INACTIVO}>
-          Siguiente ›
+        <span aria-disabled="true" className={CLASE_NAV_INACTIVO}>
+          Siguiente
+          <ChevronRight aria-hidden className="size-4" />
         </span>
       )}
     </nav>

@@ -214,21 +214,26 @@ export default async function PaginaPieza({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: jsonLd(datosProducto) }}
       />
 
-      <div className="border-b border-borde bg-superficie">
+      <div className="border-b border-linea bg-hoja">
         <Migas items={migasVisibles} className="mx-auto max-w-6xl px-4 py-3.5" />
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-10 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_260px]">
-          {/* Foto grande en tarjeta de anaquel con badge NUEVA */}
-          <div className="carta relative self-start overflow-hidden lg:sticky lg:top-24">
+        {/* Dos columnas y no tres: la tercera (el QR suelto) moría a un tercio
+            de la página y dejaba medio metro de blanco al lado del precio. El
+            ancho se lo queda ahora el contenido —la cifra, la tabla de
+            aplicaciones y los códigos— y el QR baja a acompañar a las
+            acciones, que es donde se escanea. */}
+        <div className="grid gap-6 lg:grid-cols-2 lg:gap-10 xl:gap-12">
+          {/* La pieza sobre la mesa de dibujo, con su sello de lámina nueva. */}
+          <div className="lamina relative self-start overflow-hidden lg:sticky lg:top-28">
             <FotoPieza
               src={fotoSrc}
               alt={`${producto.descripcion} — pieza nueva`}
-              className="trama-anaquel aspect-square w-full"
+              className="mesa-dibujo aspect-square w-full"
               imgClassName="p-6"
             />
-            <span className="absolute left-3 top-3 rounded-md bg-grafito px-2.5 py-1 font-display text-[11px] font-bold uppercase tracking-[0.1em] text-white">
+            <span className="rotulo-tecnico absolute left-3 top-3 rounded-sm bg-plano px-2.5 py-1 text-[11px] leading-none text-white">
               Nueva
             </span>
           </div>
@@ -242,18 +247,20 @@ export default async function PaginaPieza({ params }: Props) {
               <h1
                 className={
                   producto.descripcion.length > 70
-                    ? "titulo-cartel text-[clamp(1.35rem,2.6vw,1.8rem)] leading-[1.08]"
-                    : "titulo-cartel text-[clamp(1.9rem,4.5vw,2.75rem)]"
+                    ? "titulo-lamina text-[clamp(1.35rem,2.6vw,1.8rem)] leading-[1.08]"
+                    : "titulo-lamina text-[clamp(1.9rem,4.5vw,2.75rem)]"
                 }
               >
                 {producto.descripcion}
               </h1>
-              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-tinta-suave">
+
+              {/* El número de parte manda: así se pide la pieza en el mostrador. */}
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-tinta-suave">
                 <CopiarCodigo codigo={producto.codigo} />
                 {producto.marca && (
                   <Link
                     href={`/refacciones/${marcaSlug}`}
-                    className="font-display font-bold uppercase tracking-[0.06em] text-tinta underline-offset-4 hover:underline"
+                    className="rotulo-tecnico text-[13px] text-tinta underline-offset-4 hover:underline"
                   >
                     {producto.marca}
                   </Link>
@@ -270,7 +277,7 @@ export default async function PaginaPieza({ params }: Props) {
                     <span>{producto.tipoParte}</span>
                   ))}
                 {anios && (
-                  <span className="num-tab rounded-full border border-borde bg-fondo px-2.5 py-0.5 font-mono text-xs">
+                  <span className="num-tab rounded-sm border border-linea bg-papel px-2 py-1 font-mono text-xs leading-none">
                     {anios}
                   </span>
                 )}
@@ -284,7 +291,21 @@ export default async function PaginaPieza({ params }: Props) {
               usadas={usadas}
             />
 
-            <CtasPieza nombre={nombre} codigo={producto.codigo} />
+            {/* El QR entra en el mismo renglón que las acciones a partir de
+                xl. En móvil no se pinta: nadie escanea con su propio
+                teléfono, ahí manda el botón wa.me. */}
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
+              <CtasPieza
+                nombre={nombre}
+                codigo={producto.codigo}
+                className="min-w-0 flex-1"
+              />
+              <QrWhatsApp
+                texto={PRELLENADOS.pieza(nombre, producto.codigo)}
+                leyenda="Escanéalo y cotiza esta pieza por WhatsApp"
+                className="hidden shrink-0 xl:block"
+              />
+            </div>
 
             <Compatibilidades
               marca={producto.marca}
@@ -293,14 +314,17 @@ export default async function PaginaPieza({ params }: Props) {
 
             {producto.codigosAlternos.length > 0 && (
               <section aria-labelledby="codigos-alternos">
-                <h2 id="codigos-alternos" className="rotulo text-tinta-suave">
+                <h2
+                  id="codigos-alternos"
+                  className="rotulo-tecnico text-[13px] text-tinta-suave"
+                >
                   Códigos alternos
                 </h2>
                 <ul className="mt-3 flex flex-wrap gap-1.5">
                   {producto.codigosAlternos.map((c, i) => (
                     <li
                       key={`${c}-${i}`}
-                      className="num-tab rounded-md border border-borde bg-superficie px-2.5 py-1 font-mono text-xs text-tinta-suave"
+                      className="num-tab rounded-sm border border-linea bg-hoja px-2.5 py-1 font-mono text-xs text-tinta-suave"
                     >
                       {c}
                     </li>
@@ -309,45 +333,44 @@ export default async function PaginaPieza({ params }: Props) {
               </section>
             )}
           </div>
-
-          {/* QR solo desktop: en móvil el botón wa.me directo ya está en los CTAs */}
-          <aside className="hidden xl:block">
-            <div className="sticky top-24">
-              <QrWhatsApp
-                texto={PRELLENADOS.pieza(nombre, producto.codigo)}
-                leyenda="Escanéalo y cotiza esta pieza por WhatsApp"
-              />
-            </div>
-          </aside>
         </div>
 
         {usadas.length > 0 && (
-          <section id="usadas" className="mt-16 scroll-mt-24">
+          <section id="usadas" className="mt-20 scroll-mt-28">
             <TituloSeccion
-              rotulo="Bodega Usado"
               titulo="La misma pieza, usada y más barata"
-              descripcion="Fotos reales de la pieza exacta que recibes."
+              descripcion="Cada una es única y la foto es de la pieza exacta que recibes, no de catálogo."
             />
             <div className="mt-8 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-              {usadas.map((u) => (
-                <TarjetaUsada key={u.id} p={u} />
+              {usadas.map((u, i) => (
+                <TarjetaUsada key={u.id} p={u} indice={i} />
               ))}
             </div>
           </section>
         )}
 
+        {/* La zona del golpe: las partidas vecinas del despiece, numeradas y
+            con su línea guía, igual que en la lámina del manual. */}
         {relacionados.length > 0 && (
-          <section className="mt-16">
+          <section className="mt-20">
             <TituloSeccion
-              rotulo="El golpe completo"
               titulo="Se choca junto con"
-              descripcion="Un golpe casi nunca daña una sola pieza — revisa lo que suele cambiarse junto."
+              descripcion="Un golpe casi nunca daña una sola pieza. Estas son las partidas que suelen cambiarse en la misma zona."
             />
-            <div className="mt-8 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-              {relacionados.map((r) => (
-                <TarjetaProducto key={r.codigo} p={r} />
+            <ol className="mt-8 grid grid-cols-2 gap-x-3 gap-y-6 md:gap-x-4 lg:grid-cols-4">
+              {relacionados.map((r, i) => (
+                <li
+                  key={r.codigo}
+                  className="flex min-w-0 flex-col gap-2 [&>article]:flex-1"
+                >
+                  <span aria-hidden className="flex items-center gap-1.5">
+                    <span className="globo-partida shrink-0">{i + 1}</span>
+                    <span className="h-px flex-1 bg-linea-fuerte" />
+                  </span>
+                  <TarjetaProducto p={r} />
+                </li>
               ))}
-            </div>
+            </ol>
           </section>
         )}
       </div>

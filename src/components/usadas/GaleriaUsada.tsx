@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { Camera } from "lucide-react";
 import clsx from "clsx";
 import { FotoPieza } from "@/components/FotoPieza";
 
-// Galeria de la ficha de pieza usada: foto principal grande + tira de
-// miniaturas clicables. Las fotos son REALES (la pieza exacta que recibes),
-// por eso la banda superior lo dice. Sin fotos, cae al marcador de FotoPieza.
+// Galería de la hoja de partida usada: la foto grande y la tira de miniaturas.
+// Las fotos son REALES —la pieza exacta que se entrega—, y eso es la ventaja
+// que ningún competidor puede copiar, así que la banda superior lo dice sin
+// rodeos. Sin fotos, cae al marcador "foto por tomar" de FotoPieza.
 
 function urlFoto(nombre: string): string {
   return `/api/usadas/foto?n=${encodeURIComponent(nombre)}`;
@@ -30,10 +32,10 @@ export function GaleriaUsada({
   const fotoActual = fotos[actual] ?? fotos[0] ?? null;
 
   return (
-    <div className="carta self-start overflow-hidden">
+    <div className="lamina self-start overflow-hidden">
       {fotos.length > 0 && (
-        <p className="flex items-center gap-2 border-b border-borde bg-grafito px-4 py-2.5 font-display text-xs font-bold uppercase tracking-[0.1em] text-white">
-          <span aria-hidden className="size-1.5 rounded-full bg-exito" />
+        <p className="rotulo-tecnico flex items-center gap-2 border-b border-linea bg-plano px-4 py-3 text-xs text-white">
+          <Camera aria-hidden className="size-4 shrink-0" />
           Fotos de la pieza exacta que recibes
         </p>
       )}
@@ -47,7 +49,7 @@ export function GaleriaUsada({
               ? `Foto real ${actual + 1} de ${fotos.length}: ${descripcion}`
               : `Foto de ${descripcion} pendiente de tomar`
           }
-          className="trama-anaquel aspect-[4/3] w-full rounded-lg border border-borde"
+          className="aspect-[4/3] w-full rounded-sm border border-linea bg-papel-hondo"
           imgClassName="object-cover"
         />
 
@@ -65,10 +67,10 @@ export function GaleriaUsada({
                     aria-label={`Ver foto ${i + 1} de ${fotos.length}`}
                     aria-current={i === actual ? "true" : undefined}
                     className={clsx(
-                      "block size-16 overflow-hidden rounded-lg border-2 bg-white transition-colors duration-150",
+                      "block size-16 overflow-hidden rounded-sm border bg-hoja transition-colors duration-150",
                       i === actual
-                        ? "border-grafito"
-                        : "border-borde hover:border-tinta-suave"
+                        ? "border-tinta ring-1 ring-tinta"
+                        : "border-linea hover:border-linea-fuerte"
                     )}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}

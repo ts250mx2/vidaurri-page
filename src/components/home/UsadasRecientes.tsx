@@ -3,47 +3,58 @@ import { ArrowRight } from "lucide-react";
 import type { PiezaUsadaResumen } from "@/lib/usadas";
 import { TarjetaUsada } from "@/components/TarjetaUsada";
 
-// Usadas recién entradas a la Bodega: vitrina, no sección de landing. Encabezado
-// chico de un renglón con el enlace a /usadas y enseguida la mercancía, apretada
-// (hasta 4 por renglón en desktop, 3 en tablet, 2 en móvil).
+// Usadas recién entradas a la Bodega: mercancía, no sección de landing. Renglón
+// de cajetín con el sello rojo de anotación —cada usada es única e irrepetible,
+// y esa es la única escasez que este sitio tiene derecho a decir— y enseguida la
+// lámina llena de piezas con su foto real.
 //
 // La consulta vive en la página dentro de try/catch: si la base remota falla
 // llega lista vacía y la sección entera se oculta sin romper la home.
+
+const MAXIMO_PIEZAS = 8;
 
 export function UsadasRecientes({ piezas }: { piezas: PiezaUsadaResumen[] }) {
   if (piezas.length === 0) return null;
 
   return (
-    <section aria-labelledby="usadas-titulo" className="bg-fondo">
+    <section
+      aria-labelledby="usadas-titulo"
+      className="border-y border-linea bg-papel-hondo"
+    >
       <div className="mx-auto max-w-6xl px-4 py-10 md:py-12">
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-          <div>
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-linea-fuerte pb-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <h2
               id="usadas-titulo"
-              className="titulo-display text-xl text-tinta md:text-[1.375rem]"
+              className="rotulo-tecnico text-[clamp(1.15rem,2.6vw,1.5rem)] leading-none text-tinta"
             >
               Usadas recién entradas
             </h2>
-            {/* El argumento de la casa: la foto es de la pieza exacta, no de
-                catálogo. Va corto y pegado al título, no como bajada de landing. */}
-            <p className="mt-1 text-[13px] leading-snug text-tinta-suave">
-              Foto real de la pieza exacta que te llevas. Cada una es única: si te
-              late, apártala.
-            </p>
+            {/* Sobre papelito blanco: la tinta de anotación sobre el papel
+                hondo se queda en 3.7:1 y esto se lee al sol. */}
+            <span className="sello sello-unica bg-hoja">Pieza única</span>
           </div>
 
           <Link
             href="/usadas"
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 font-display text-sm font-bold uppercase tracking-wide text-tinta underline-offset-4 hover:underline"
+            className="rotulo-tecnico inline-flex min-h-11 shrink-0 items-center gap-1.5 text-[13px] text-tinta underline-offset-4 hover:underline"
           >
-            Ver todas las usadas
+            <span className="sm:hidden">Ver todas</span>
+            <span className="hidden sm:inline">Ver todas las usadas</span>
             <ArrowRight aria-hidden className="size-4" />
           </Link>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:gap-3 lg:grid-cols-4">
-          {piezas.slice(0, 8).map((p) => (
-            <TarjetaUsada key={p.id} p={p} />
+        {/* El argumento de la casa, en un renglón: la foto es de la pieza exacta
+            que se entrega, no de catálogo. */}
+        <p className="mt-3 max-w-[68ch] text-[14px] leading-snug text-tinta-suave">
+          La foto es de la pieza exacta que te llevas. Cada una es de una sola
+          unidad: si te late, apártala.
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
+          {piezas.slice(0, MAXIMO_PIEZAS).map((p, i) => (
+            <TarjetaUsada key={p.id} p={p} indice={i} />
           ))}
         </div>
       </div>

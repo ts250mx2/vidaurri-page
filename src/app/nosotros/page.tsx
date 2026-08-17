@@ -60,15 +60,14 @@ export default async function PaginaNosotros() {
   return (
     <>
       <EncabezadoPagina
-        rotulo="La casa"
         titulo="Más de 40 años en el mostrador"
         descripcion="Importamos, comercializamos y distribuimos refacciones de colisión en Monterrey. El oficio es el mismo de siempre: encontrar la pieza correcta al precio justo."
         migas={[{ nombre: "Inicio", href: "/" }, { nombre: "Nosotros" }]}
       />
 
-      <section className="bg-fondo">
+      <section className="bg-papel">
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
-          <div className="max-w-3xl space-y-4 text-[15px] leading-relaxed">
+          <div className="max-w-[68ch] space-y-5 text-[15px] leading-relaxed">
             <p>
               Autopartes Vidaurri lleva más de 40 años importando,
               comercializando y distribuyendo refacciones automotrices de
@@ -93,16 +92,22 @@ export default async function PaginaNosotros() {
 
       <TableroCifras datos={cifras} etiqueta="La casa en números" />
 
-      <section className="bg-fondo">
+      <section className="bg-papel">
         <div className="mx-auto max-w-6xl px-4 py-14 md:py-20">
-          <TituloSeccion rotulo="Ventajas" titulo="Por qué comprarnos" />
-          <ul className="mt-8 grid max-w-4xl gap-3 md:grid-cols-2 md:gap-4">
+          <TituloSeccion titulo="Por qué comprarnos" />
+
+          {/* Lista de especificación, no parrilla de tarjetas: un renglón por
+              razón, separados por el filete del plano. */}
+          <ul className="mt-8 max-w-[72ch] divide-y divide-linea border-b border-linea">
             {RAZONES.map((r) => (
               <li
                 key={r}
-                className="carta flex items-start gap-3 p-5 text-sm leading-relaxed"
+                className="flex items-start gap-3 py-4 text-[15px] leading-relaxed"
               >
-                <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-exito" />
+                <Check
+                  aria-hidden
+                  className="mt-0.5 size-4 shrink-0 text-existencia"
+                />
                 {r}
               </li>
             ))}
@@ -111,22 +116,19 @@ export default async function PaginaNosotros() {
       </section>
 
       {/* CTA final: chat ámbar (2º nivel) + catálogo neutro (4º nivel). */}
-      <section className="trama-rejilla border-t border-borde bg-superficie">
+      <section className="border-t border-linea bg-hoja">
         <div className="mx-auto max-w-6xl px-4 py-14 md:py-20">
-          <TituloSeccion
-            rotulo="Empieza aquí"
-            titulo="¿Chocaste? Empieza por tu pieza"
-          />
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+          <TituloSeccion titulo="¿Chocaste? Empieza por tu pieza" />
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <BotonCotizar
               mensaje="Hola, quiero cotizar una pieza. Mi auto es: "
-              className="px-6 py-3.5"
+              className="min-h-12 px-6"
             >
               Cotizar por chat
             </BotonCotizar>
             <Link
               href="/refacciones"
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-borde bg-superficie px-5 py-3.5 font-display text-sm font-bold uppercase tracking-wide text-tinta transition-colors duration-150 hover:border-grafito"
+              className="rotulo-tecnico inline-flex min-h-12 items-center justify-center gap-1.5 rounded-md border border-linea bg-hoja px-5 text-sm text-tinta transition-colors duration-150 hover:border-tinta hover:bg-papel"
             >
               Ver el catálogo
               <ArrowRight aria-hidden className="size-4" />

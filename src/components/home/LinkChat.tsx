@@ -3,8 +3,9 @@
 import clsx from "clsx";
 import { abrirChat } from "@/components/BotonCotizar";
 
-// CTA de texto que abre el chat de Vico (nivel navegación, sin ámbar): para
-// las tarjetas donde el botón ámbar completo pesaría de más.
+// CTA de texto que abre el chat de Vico (nivel navegación, sin ámbar): para los
+// renglones donde el botón ámbar completo pesaría de más. Trae su propia área
+// táctil de 44px para que ninguna llamada tenga que acordarse de agregarla.
 
 export function LinkChat({
   mensaje,
@@ -21,7 +22,7 @@ export function LinkChat({
       type="button"
       onClick={() => abrirChat(mensaje)}
       className={clsx(
-        "inline-flex items-center gap-1.5 font-display text-sm font-bold uppercase tracking-wide text-tinta underline-offset-4 hover:underline",
+        "rotulo-tecnico inline-flex min-h-11 items-center gap-1.5 text-[13px] text-tinta underline-offset-4 hover:underline",
         className
       )}
     >

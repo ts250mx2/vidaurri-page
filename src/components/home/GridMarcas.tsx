@@ -4,12 +4,15 @@ import type { Marca } from "@/lib/catalogo";
 import { slugificar } from "@/lib/slug";
 import { LogoMarca } from "@/components/LogoMarca";
 
-// Vitrina de marcas del mostrador: el logo del fabricante manda y debajo va el
-// contero real de piezas disponibles, como el letrero de un anaquel. Solo
-// entran las marcas que la tienda REALMENTE surte, ya ordenadas de mayor a
-// menor por piezas desde la página (antes se listaban alfabéticamente marcas
-// sin una sola pieza). Los logos van en su color: un comercio los enseña como
-// son, sin filtros de gris ni adornos.
+// Muro de placas sobre campo azul: el logo del fabricante manda y debajo va el
+// contero real de piezas disponibles. Es la banda de campo azul de la mitad de
+// la página — rompe la sucesión de papel sin gastar el bloque oscuro
+// protagonista, y las placas blancas sostienen logos que en su mayoría son de
+// tinta oscura.
+//
+// Solo entran las marcas que la tienda REALMENTE surte, ya ordenadas de mayor a
+// menor por piezas desde la página. Los logos van en su color: un comercio los
+// enseña como son, sin filtros de gris ni adornos.
 
 const MAX_VISIBLES = 12;
 
@@ -24,37 +27,35 @@ export function GridMarcas({
   return (
     <section
       aria-labelledby="marcas-titulo"
-      className="border-y border-borde bg-fondo-hondo"
+      className="sobre-plano border-y border-white/15 bg-plano text-white"
     >
       <div className="mx-auto max-w-6xl px-4 py-10 md:py-12">
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-          <div>
-            <h2
-              id="marcas-titulo"
-              className="titulo-display text-xl text-tinta md:text-[1.375rem]"
-            >
-              Marcas que surtimos
-            </h2>
-            <p className="mt-1 text-[13px] leading-snug text-tinta-suave">
-              Toca tu marca y filtra por modelo y año. Precio con IVA a la vista.
-            </p>
-          </div>
-
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-white/20 pb-3">
+          <h2
+            id="marcas-titulo"
+            className="rotulo-tecnico text-[clamp(1.15rem,2.6vw,1.5rem)] leading-none text-white"
+          >
+            Marcas que surtimos
+          </h2>
           <Link
             href="/refacciones"
-            className="inline-flex min-h-11 items-center gap-1.5 font-display text-sm font-bold uppercase tracking-wide text-tinta underline-offset-4 hover:underline"
+            className="rotulo-tecnico inline-flex min-h-11 shrink-0 items-center gap-1.5 text-[13px] text-white underline-offset-4 hover:underline"
           >
             Ver las {marcas.length} marcas
             <ArrowRight aria-hidden className="size-4" />
           </Link>
         </div>
 
-        <ul className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6">
+        <p className="mt-3 max-w-[68ch] text-[14px] leading-snug text-white/75">
+          Toca tu marca y filtra por modelo y año. Precio con IVA a la vista.
+        </p>
+
+        <ul className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-6">
           {visibles.map((m) => (
             <li key={m.id}>
               <Link
                 href={`/refacciones/${slugificar(m.linea)}`}
-                className="flex h-full flex-col items-center justify-start gap-2 rounded-lg border border-borde bg-superficie px-2 py-3 text-center transition-[border-color,box-shadow,transform] duration-150 hover:border-grafito hover:shadow-carta-alta motion-safe:hover:-translate-y-0.5"
+                className="lamina lamina-enlace flex h-full flex-col items-center justify-start gap-2 px-2 py-3 text-center"
               >
                 {/* El logo es decorativo para el lector de pantalla: el nombre
                     de la marca va escrito justo debajo, no hay que leerlo dos
@@ -65,7 +66,7 @@ export function GridMarcas({
                 >
                   <LogoMarca marca={m.linea} />
                 </span>
-                <span className="font-display text-[12px] font-bold uppercase leading-tight tracking-[0.06em] text-tinta sm:text-[13px]">
+                <span className="rotulo-tecnico text-[12px] leading-tight text-tinta sm:text-[13px]">
                   {m.linea}
                 </span>
                 <span className="num-tab font-mono text-[11px] leading-none text-tinta-suave">

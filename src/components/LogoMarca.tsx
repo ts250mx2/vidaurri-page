@@ -7,7 +7,7 @@ import { slugificar } from "@/lib/slug";
 // Logo del fabricante para la vitrina de marcas. Los archivos viven en
 // public/marcas/<slug>.png (descargados una vez con scripts/descargar-logos.mjs,
 // nunca enlazados en caliente a un tercero). Si una marca no tiene archivo, cae
-// al nombre en Barlow: la rejilla no se rompe ni deja huecos.
+// al nombre en el rotulado del plano: la retícula no se rompe ni deja huecos.
 
 export function LogoMarca({
   marca,
@@ -23,7 +23,7 @@ export function LogoMarca({
     return (
       <span
         className={clsx(
-          "font-display text-[13px] font-bold uppercase leading-tight tracking-[0.06em] text-tinta",
+          "rotulo-tecnico text-[13px] leading-tight text-tinta",
           className
         )}
       >
@@ -36,7 +36,7 @@ export function LogoMarca({
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
       src={`/marcas/${slug}.png`}
-      alt={marca}
+      alt={`Logo de ${marca}`}
       loading="lazy"
       decoding="async"
       onError={() => setFallo(true)}

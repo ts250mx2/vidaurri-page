@@ -1,44 +1,66 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Dirección de diseño "Mostrador": el mostrador de una
-   refaccionaria regia de 40 años llevado a pantalla. Tema claro
-   industrial. Regla de oro: si es ámbar, convierte; si es verde
-   brillante, es WhatsApp; nada más usa esos colores.
+   MUNDO VISUAL: "DESPIECE EN VITRINA"
 
-   Todo lo "gráfico" del sitio se construye con lo que SÍ es
-   nuestro: la foto real del catálogo, el grafito, la retícula de
-   plano técnico y la Barlow Condensed en grande. Nunca con ámbar
-   decorativo — el ámbar solo se gana cuando hay algo que tocar.
+   El catálogo de despiece del manual de taller, expuesto en una
+   vitrina nocturna de refaccionaria fina. Un choque no daña una
+   pieza: daña una zona. La página abre el auto en sus piezas
+   numeradas, con globo de partida y línea guía a su renglón de
+   precio, y deja que el cliente toque la que se rompió.
+
+   La referencia que fijó el cliente manda la paleta:
+   - El CAMPO es carbón cálido, no azul: hero, header, footer y
+     las bandas de cifras. Ahí vive la foto del auto.
+   - El ORO es la identidad de la casa: filos, iconos, rótulos de
+     dato y el marco del énfasis. Metálico en filos y fondos,
+     nunca en el texto (un texto con degradado es un truco, no
+     una jerarquía).
+   - La MERCANCÍA va sobre papel claro y lámina blanca: al sol,
+     en el patio de un taller, el precio tiene que leerse.
+   - El ROJO es tinta de anotación: la corrección del ajustador.
+     Marca lo único e irrepetible (la pieza usada) y el error.
+   - Prohibido: etiquetas-rótulo sobre los títulos, bordes
+     laterales de color, tarjetas dentro de tarjetas.
    ============================================================ */
 
 @theme {
-  /* --- Colores --- */
-  --color-fondo: #f4f5f7; /* gris acero claro, fondo general */
-  --color-fondo-hondo: #e8eaef; /* neutro un paso más hondo: bandas alternas */
-  --color-superficie: #ffffff; /* tarjetas, buscador, tablas */
-  --color-borde: #e3e6ea;
-  --color-borde-fuerte: #ced4dc; /* hairline con peso: separadores y hover */
-  --color-tinta: #171b21; /* grafito: texto principal, header, footer */
-  --color-tinta-suave: #5c6570; /* texto secundario, SKU, metadatos */
-  --color-grafito: #171b21;
-  --color-grafito-claro: #232933; /* superficies sobre grafito */
-  --color-grafito-hondo: #0d1015; /* fondo de las bandas oscuras y del hero */
-  --color-ambar: #ffb400; /* EXCLUSIVO de la acción (cotizar, precios clave) */
-  --color-ambar-press: #d9480f; /* hover/pressed del ámbar y acentos de ahorro */
-  --color-whatsapp: #25d366; /* reservado únicamente a WhatsApp */
-  --color-exito: #1f9d55; /* existencia y confirmaciones */
+  /* --- Papel y tinta: donde vive la mercancía --- */
+  --color-papel: #eceef1; /* suelo de las bandas de catálogo */
+  --color-papel-hondo: #dfe3e8; /* segundo plano: bandas alternas */
+  --color-hoja: #ffffff; /* la lámina: tarjetas, tablas, buscador */
+  --color-linea: #d3d8de; /* hairline */
+  --color-linea-fuerte: #a9b2bc; /* trazo con peso: separadores, hover */
+  --color-tinta: #16181d; /* texto principal sobre papel */
+  --color-tinta-suave: #5b626c; /* cota, metadato, número de parte */
 
-  /* --- Tipografía (las variables las inyecta next/font en el layout) --- */
-  --font-display: var(--font-barlow), "Arial Narrow", sans-serif;
+  /* --- El campo: GRIS AZUL ACERO, el tono de la lámina de un auto en
+         penumbra. Header, hero, footer y la tira de credenciales. --- */
+  --color-plano: #2c3542; /* campo medio: header y bandas */
+  --color-plano-hondo: #1a222c; /* el fondo de la vitrina y del hero */
+  --color-plano-claro: #3b4757; /* panel elevado sobre el campo */
+
+  /* --- Oro: la identidad de la casa --- */
+  --color-ambar: #d4af37; /* oro: filos, iconos, acción */
+  --color-ambar-press: #b8942c; /* oro pisado */
+  --color-oro-claro: #f0d97d; /* brillo alto del metal */
+  --color-oro-hondo: #8a6d1c; /* sombra del metal */
+
+  /* --- Señales --- */
+  --color-anotacion: #d92d20; /* tinta roja: pieza única, urgencia real */
+  --color-existencia: #1f9d55; /* verde de sello: hay pieza en el anaquel */
+  --color-whatsapp: #25d366; /* reservado a WhatsApp */
+
+  /* --- Tipografía (next/font inyecta las variables en el layout) --- */
+  --font-display: var(--font-archivo), "Arial Narrow", sans-serif;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), Consolas, monospace;
 
-  /* --- Elevación: una sola escala, tres pasos --- */
-  --shadow-carta: 0 1px 2px rgb(13 16 21 / 0.04), 0 2px 8px rgb(13 16 21 / 0.05);
-  --shadow-carta-alta: 0 2px 4px rgb(13 16 21 / 0.05),
-    0 14px 30px rgb(13 16 21 / 0.13);
-  --shadow-flotante: 0 20px 50px rgb(13 16 21 / 0.4);
+  /* --- Elevación: la lámina sobre el plano, tres pasos --- */
+  --shadow-lamina: 0 1px 2px rgb(10 24 38 / 0.05), 0 2px 8px rgb(10 24 38 / 0.06);
+  --shadow-lamina-alta: 0 2px 4px rgb(10 24 38 / 0.06),
+    0 14px 30px rgb(10 24 38 / 0.14);
+  --shadow-flotante: 0 20px 50px rgb(10 24 38 / 0.45);
 }
 
 html {
@@ -47,11 +69,10 @@ html {
 
 body {
   overscroll-behavior: none;
-  background: var(--color-fondo);
+  background: var(--color-papel);
   color: var(--color-tinta);
 }
 
-/* Evita zoom accidental por doble tap en elementos interactivos */
 button,
 a,
 input,
@@ -60,188 +81,468 @@ textarea {
   touch-action: manipulation;
 }
 
-/* Cifras alineables en tablas y precios */
+/* ============================================================
+   SUPERFICIES DEL NAVEGADOR
+   Lo que no dibujamos también lleva el diseño: selección, cursor,
+   barra de desplazamiento y foco salen del mundo, no del sistema.
+   ============================================================ */
+
+::selection {
+  background: var(--color-ambar);
+  color: var(--color-plano-hondo);
+}
+
+input,
+textarea {
+  caret-color: var(--color-anotacion);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-linea-fuerte) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-papel-hondo);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-linea-fuerte);
+  border: 3px solid var(--color-papel-hondo);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-tinta-suave);
+}
+
+/* Cifras alineables: precios, códigos y cotas */
 .num-tab {
   font-variant-numeric: tabular-nums;
 }
 
 /* ============================================================
-   TIPOGRAFÍA DE SEÑALIZACIÓN
+   ROTULADO TÉCNICO
+   La letra del plano: condensada, en caja alta, monolineal.
    ============================================================ */
 
-/* Títulos display: Barlow Condensed en mayúsculas, tono de señalización */
-.titulo-display {
+.rotulo-tecnico {
   font-family: var(--font-display);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  /* Montserrat en caja alta necesita aire entre letras; sin él las mayúsculas
+     se apelmazan y pierden el aire de letrero de fachada. */
+  letter-spacing: 0.045em;
   text-wrap: balance;
 }
 
-/* Los tamaños grandes de Barlow Condensed piden tracking negativo: a partir
-   de ~3rem el 0.02em del display abre demasiado las letras. */
-.titulo-cartel {
+/* Titular de fachada: el peso más alto y las letras casi tocándose, como el
+   rótulo pintado sobre la cortina de un taller. */
+.titulo-lamina {
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: -0.01em;
-  /* 0.98 y no menos: en mayúsculas el español acentúa (MÁS, CAPÓ, AÑOS) y con
-     interlineado más cerrado la tilde de un renglón toca el de arriba. */
-  line-height: 0.98;
+  letter-spacing: -0.022em;
+  /* 1.05 y no menos: en mayúsculas el español acentúa (MÁS, CAPÓ, AÑOS)
+     y con interlineado más cerrado la tilde toca el renglón de arriba. */
+  line-height: 1.05;
   text-wrap: balance;
-}
-
-/* Rótulo de sección: la etiqueta chica sobre cada H2, en tono de anaquel. */
-.rotulo {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-}
-
-/* Placa de señalización: el mismo énfasis del marcador pero sobre grafito,
-   donde un subrayado ámbar bajo texto blanco no daría contraste. La tinta va
-   en grafito, como los letreros de anaquel. Solo para títulos sobre oscuro. */
-.placa-ambar {
-  display: inline-block;
-  background: var(--color-ambar);
-  color: var(--color-grafito);
-  /* La caja de fondo de un inline mide lo que las métricas de la fuente
-     (~1.2em en Barlow), así que sobre un titular con interlineado cerrado se
-     encabalgaba con el renglón de arriba. Como inline-block con line-height
-     controlado, la placa mide exactamente lo que ocupa su texto. */
-  line-height: 1;
-  padding: 0.07em 0.14em 0.09em;
-  vertical-align: baseline;
-  /* La placa nunca se parte: dos medias placas en renglones distintos se leen
-     como un error de maquetación, no como énfasis. */
-  white-space: nowrap;
-}
-
-/* Subrayado grueso ámbar tipo marcador (hero y énfasis puntuales) */
-.marcador-ambar {
-  background: linear-gradient(
-    transparent 68%,
-    var(--color-ambar) 68%,
-    var(--color-ambar) 96%,
-    transparent 96%
-  );
-  padding: 0 0.08em;
 }
 
 /* ============================================================
-   SUPERFICIES
+   EL DESPIECE
+   Globo de partida, línea guía y sello: la gramática del plano.
    ============================================================ */
 
-/* Tarjeta del mostrador: la base común de toda superficie elevada. */
-.carta {
-  background: var(--color-superficie);
-  border: 1px solid var(--color-borde);
-  border-radius: 0.75rem;
-  box-shadow: var(--shadow-carta);
-  transition:
-    box-shadow 150ms ease,
-    border-color 150ms ease,
-    transform 150ms ease;
+/* Globo de número de partida: el círculo que rotula cada pieza. */
+.globo-partida {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.35rem;
+  border: 1.5px solid var(--color-tinta);
+  border-radius: 999px;
+  background: var(--color-hoja);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-tinta);
+  line-height: 1;
 }
 
-/* Solo para tarjetas que son un enlace: se levantan al pasar el cursor. */
-.carta-enlace:hover {
-  border-color: var(--color-borde-fuerte);
-  box-shadow: var(--shadow-carta-alta);
+/* Sobre el campo azul el globo se invierte. */
+.globo-partida-claro {
+  border-color: rgb(255 255 255 / 0.55);
+  background: transparent;
+  color: #fff;
+}
+
+/* Sello de existencia: pastilla de contorno con su glifo, como los distintivos
+   de la referencia. Es una MARCA y no un punto de color, para que el estado se
+   lea aunque la pantalla esté quemada por el sol. Va recto: girarlo lo hacía
+   ver como una calcomanía mal pegada, no como un distintivo de la casa. */
+.sello {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+}
+
+.sello-existencia {
+  color: var(--color-existencia);
+}
+
+.sello-unica {
+  color: var(--color-anotacion);
+}
+
+/* ============================================================
+   EL METAL
+   El oro de la casa. Va en filos, marcos y fondos — nunca en el
+   texto: un titular con degradado es un truco, no una jerarquía.
+   ============================================================ */
+
+/* Icono troquelado en metal: el trazo toma el degradado que define
+   <DefsMetal/> en el layout, así el glifo tiene canto iluminado y
+   base en sombra en vez de un color plano. Reservado a los iconos
+   grandes de credencial; en tamaños chicos el degradado se pierde y
+   ahí manda `text-ambar`. */
+.icono-metal {
+  stroke: url(#metal-vidaurri);
+  color: var(--color-ambar); /* respaldo si el degradado no resuelve */
+}
+
+/* La banda de credenciales: el gris azul cruzado por una veta de bronce,
+   como una placa de latón atornillada sobre lámina de acero. */
+.veta-bronce {
+  background: linear-gradient(
+    90deg,
+    #1c242f 0%,
+    #2a2b28 14%,
+    #4f4020 26%,
+    #6b5420 36%,
+    #4a3f24 47%,
+    #2b3644 60%,
+    #232e3b 78%,
+    #1c242f 100%
+  );
+}
+
+/* Filo metálico: la línea de oro bajo el header y sobre el footer. */
+.filo-oro {
+  background: linear-gradient(
+    90deg,
+    var(--color-oro-hondo) 0%,
+    var(--color-oro-claro) 22%,
+    var(--color-ambar) 50%,
+    var(--color-oro-claro) 78%,
+    var(--color-oro-hondo) 100%
+  );
+}
+
+/* Marco de énfasis: el recuadro de oro que encierra la palabra clave
+   del titular. Sustituye a la placa sólida: sobre la vitrina oscura el
+   texto se queda en blanco y el oro solo lo enmarca. */
+.marco-oro {
+  display: inline-block;
+  border: 2.5px solid var(--color-ambar);
+  border-radius: 0.625rem;
+  padding: 0.15em 0.45em 0.15em;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 0 12px rgb(212 175 55 / 0.25),
+    0 0 16px rgb(212 175 55 / 0.35);
+}
+
+/* Botón metálico plateado brillante para acciones principales (BUSCAR MI PIEZA, VER DETALLES) */
+.boton-metal-plata {
+  background: linear-gradient(180deg, #e6e8eb 0%, #b0b7c0 50%, #88929e 100%);
+  color: #111317;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.35);
+  transition: all 150ms ease;
+}
+
+.boton-metal-plata:hover {
+  background: linear-gradient(180deg, #f0f2f5 0%, #c4cbd5 50%, #9aa4b2 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 6px 16px rgba(0, 0, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.boton-metal-plata:active {
+  background: linear-gradient(180deg, #9aa4b2 0%, #b0b7c0 100%);
+  transform: translateY(0);
+}
+
+/* ETIQUETA DE ORIGEN de la mercancía. Es lo primero que el ojo agarra al
+   barrer la parrilla, así que se gana el metal: placa de latón con canto
+   iluminado, sombra propia y letra oscura encima. La de usada va en tinta de
+   anotación, porque una pieza única no es lo mismo que una de anaquel. */
+.etiqueta-origen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    0 2px 6px rgb(10 14 20 / 0.45);
+}
+
+.etiqueta-nueva {
+  background: linear-gradient(180deg, #f6e39c 0%, #d4af37 55%, #a9821f 100%);
+  color: var(--color-plano-hondo);
+}
+
+.etiqueta-usada {
+  background: linear-gradient(180deg, #f4675c 0%, #d92d20 55%, #a51b11 100%);
+  color: #fff;
+  text-shadow: 0 1px 1px rgb(90 12 6 / 0.5);
+}
+
+/* Panel de vitrina: la superficie elevada sobre el campo oscuro.
+   Translúcida, con el filo superior encendido como un cristal. */
+.panel-vitrina {
+  background:
+    linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.1) 0%,
+      rgb(255 255 255 / 0.035) 45%,
+      rgb(255 255 255 / 0.02) 100%
+    ),
+    linear-gradient(180deg, rgb(50 62 78 / 0.72) 0%, rgb(30 39 50 / 0.78) 100%);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    inset 0 -1px 0 rgb(0 0 0 / 0.25),
+    0 10px 30px rgb(10 14 20 / 0.35);
+  backdrop-filter: blur(3px);
+}
+
+/* Tarjeta oscura metálica de producto en la vitrina */
+.tarjeta-oscura {
+  background: linear-gradient(180deg, #242932 0%, #151921 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.75rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 10px 25px rgba(0, 0, 0, 0.5);
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tarjeta-oscura:hover {
+  border-color: var(--color-ambar);
+  box-shadow:
+    inset 0 1px 0 rgba(240, 217, 125, 0.3),
+    0 14px 35px rgba(0, 0, 0, 0.65),
+    0 0 15px rgba(212, 175, 55, 0.15);
+  transform: translateY(-3px);
+}
+
+/* ============================================================
+   LÁMINAS
+   ============================================================ */
+
+.lamina {
+  background: var(--color-hoja);
+  border: 1px solid var(--color-linea);
+  /* Esquina de vitrina, no de plano: la referencia del cliente pide un radio
+     visible en tarjetas, paneles y botones. */
+  border-radius: 0.625rem;
+  box-shadow: var(--shadow-lamina);
+  transition:
+    box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 150ms ease,
+    transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lamina-enlace:hover {
+  border-color: var(--color-tinta);
+  box-shadow: var(--shadow-lamina-alta);
   transform: translateY(-2px);
 }
 
-/* Tarjeta sobre banda grafito (franja del asistente, mayoreo). */
-.carta-oscura {
-  background: var(--color-grafito-claro);
-  border: 1px solid rgb(255 255 255 / 0.08);
-  border-radius: 0.75rem;
+/* Lámina sobre el campo azul. */
+.lamina-plano {
+  background: var(--color-plano-claro);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 0.625rem;
 }
 
 /* ============================================================
-   TEXTURAS — retícula de plano técnico, en neutros. Nunca ámbar.
+   LA MESA DE DIBUJO
+   La única retícula que sobrevive, y no es adorno: las fotos del
+   catálogo vienen recortadas sobre blanco y sin una base se leen
+   flotando en el vacío. Es la superficie donde se apoya la pieza,
+   el caso que la propia regla del detector exceptúa.
    ============================================================ */
 
-/* Cuadrícula tenue para bandas claras: da profundidad sin meter color. */
-.trama-rejilla {
-  background-image:
-    linear-gradient(to right, rgb(23 27 33 / 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(23 27 33 / 0.045) 1px, transparent 1px);
-  background-size: 34px 34px;
-}
-
-/* La misma cuadrícula sobre grafito. */
-.trama-rejilla-oscura {
-  background-image:
-    linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
-  background-size: 34px 34px;
-}
-
-/* Textura de anaquel para el fondo de las fotos de producto: las fotos del
-   catálogo vienen sobre blanco, así el recorte no se pierde en la tarjeta. */
-.trama-anaquel {
-  background-color: var(--color-superficie);
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    rgb(23 27 33 / 0.07) 1px,
-    transparent 0
-  );
-  background-size: 14px 14px;
+/* Fondo de las fotos de producto: la mesa de dibujo. Las fotos del
+   catálogo vienen recortadas sobre blanco y necesitan una base. */
+.mesa-dibujo {
+  background-color: var(--color-hoja);
+  background-image: linear-gradient(
+      to right,
+      rgb(15 34 51 / 0.055) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgb(15 34 51 / 0.055) 1px, transparent 1px);
+  background-size: 12px 12px;
 }
 
 /* ============================================================
-   HERO — el muro de piezas reales detrás del buscador
+   LA VITRINA DEL HERO
+   El fondo es foto REAL del catálogo, nunca stock: las piezas se
+   funden en el carbón como metal en penumbra y el velo garantiza
+   que el titular y el buscador manden.
    ============================================================ */
 
-/* Las fotos del catálogo vienen sobre fondo blanco: sobre grafito quedarían
-   como recuadros brillantes. `luminosity` + gris las funde en una pared de
-   metal, y el velo de abajo garantiza el contraste del texto encima. */
-.mosaico-pieza {
-  filter: grayscale(1) contrast(1.15);
+.pieza-vitrina {
+  filter: grayscale(1) contrast(1.2) brightness(0.75);
   mix-blend-mode: luminosity;
-  opacity: 0.45;
+  opacity: 0.35;
 }
 
-/* Velo del hero: sólido del lado del texto, abierto del lado de las piezas. */
-.velo-hero {
+/* Velo de la vitrina: cierra por abajo y por la izquierda, donde
+   viven el titular y el buscador, y deja respirar la esquina de la
+   foto. El halo de oro es de luz de vitrina, no un degradado
+   decorativo: nace del filo del header. */
+/* El velo protege la lectura, no esconde la foto. Cierra fuerte SOLO en el
+   carril del titular (la izquierda) y se abre casi por completo en el centro y
+   la derecha, que es donde se reconoce la bodega. Del mismo gris azul del
+   campo: un velo neutro apagaría el color de las fotos del cliente. */
+.velo-vitrina {
   background:
     linear-gradient(
       to right,
-      var(--color-grafito-hondo) 0%,
-      rgb(13 16 21 / 0.94) 42%,
-      rgb(13 16 21 / 0.72) 72%,
-      rgb(13 16 21 / 0.82) 100%
+      rgb(26 34 44 / 0.92) 0%,
+      rgb(26 34 44 / 0.78) 22%,
+      rgb(26 34 44 / 0.34) 46%,
+      rgb(26 34 44 / 0.2) 70%,
+      rgb(26 34 44 / 0.28) 100%
     ),
-    linear-gradient(to bottom, rgb(13 16 21 / 0.55) 0%, transparent 30%);
+    linear-gradient(to bottom, rgb(26 34 44 / 0.42) 0%, transparent 26%);
 }
 
-/* En móvil el texto ocupa todo el ancho: el velo se cierra parejo. */
+/* Sombra de lectura: el titular y el subtítulo del hero se apoyan sobre foto,
+   no sobre un color plano. Una sombra suave y desplazada les da borde propio
+   sin que se lean como texto con contorno. */
+.sombra-lectura {
+  text-shadow:
+    0 1px 2px rgb(12 18 26 / 0.55),
+    0 3px 14px rgb(12 18 26 / 0.4);
+}
+
 @media (max-width: 767px) {
-  .velo-hero {
-    background: linear-gradient(
-      to bottom,
-      rgb(13 16 21 / 0.9) 0%,
-      rgb(13 16 21 / 0.86) 55%,
-      rgb(13 16 21 / 0.94) 100%
-    );
+  .velo-vitrina {
+    background:
+      radial-gradient(
+        90% 40% at 70% 6%,
+        rgb(212 175 55 / 0.14) 0%,
+        transparent 65%
+      ),
+      linear-gradient(
+        to bottom,
+        rgb(17 17 22 / 0.88) 0%,
+        rgb(17 17 22 / 0.84) 55%,
+        rgb(17 17 22 / 0.95) 100%
+      );
   }
 }
 
 /* ============================================================
-   FOCO Y MOVIMIENTO
+   EL MOMENTO
+   Uno solo en toda la portada: la vitrina se enciende. Al cargar,
+   una luz recorre UNA VEZ el filo de oro que remata el hero, de
+   izquierda a derecha, como el tubo de una vitrina al prender.
+
+   El filo ya está pintado antes de que la animación exista: la luz
+   viaja en un pseudo-elemento por encima y su estado en reposo es
+   invisible. Si el motor de animación nunca corre —o el visitante
+   pidió menos movimiento— el filo se lee completo y no falta nada.
+
+   No hay entrada de sección ni efectos repartidos: este es el único
+   movimiento autorado, y por eso se nota.
    ============================================================ */
 
-/* Foco visible consistente en todo el sitio */
+@keyframes enciende-vitrina {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* `.filo-oro` se usa como capa absoluta dentro del hero, así que ya es
+   el bloque contenedor de su propia luz, y el hero recorta el sobrante. */
+.filo-oro::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Reposo: apagada. El barrido es lo único que la enciende. */
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(240 217 125 / 0.85) 42%,
+    #fff 50%,
+    rgb(240 217 125 / 0.85) 58%,
+    transparent 100%
+  );
+  animation: enciende-vitrina 1100ms cubic-bezier(0.16, 1, 0.3, 1) 180ms both;
+}
+
+/* ============================================================
+   FOCO
+   ============================================================ */
+
 :focus-visible {
-  outline: 2px solid var(--color-ambar-press);
+  outline: 2px solid var(--color-anotacion);
   outline-offset: 2px;
 }
 
-/* Sobre grafito el naranja del foco se apaga: ahí manda el ámbar. */
-.sobre-grafito :focus-visible {
+/* Sobre el campo azul la anotación roja se apaga: ahí manda el ámbar. */
+.sobre-plano :focus-visible {
   outline-color: var(--color-ambar);
 }
 
@@ -250,10 +551,11 @@ textarea {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 
-  .carta-enlace:hover {
+  .lamina-enlace:hover {
     transform: none;
   }
 }

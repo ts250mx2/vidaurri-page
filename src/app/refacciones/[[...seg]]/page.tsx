@@ -321,23 +321,34 @@ export default async function PaginaCatalogo(props: PropsCatalogo) {
 
       {f.marca && <PillVehiculo etiqueta={etiquetaVehiculo} total={resultado.total} />}
 
-      <EncabezadoPagina rotulo="Catálogo" titulo={h1} migas={migas}>
+      <EncabezadoPagina
+        titulo={h1}
+        migas={migas}
+        documento={
+          totalPaginas > 1
+            ? `Hoja ${resultado.page} de ${totalPaginas}`
+            : undefined
+        }
+      >
         {lineaResultados && (
-          <p className="num-tab mt-4 text-sm text-slate-400">{lineaResultados}</p>
+          <p className="num-tab mt-4 text-sm text-white/70">{lineaResultados}</p>
         )}
       </EncabezadoPagina>
 
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <div className="flex items-start gap-6">
-          {/* Rail de filtros: solo desktop, sticky bajo el header (y la pill). */}
+          {/* Rail de filtros: solo escritorio, fijo bajo el header (y el
+              renglón de vehículo, cuando lo hay). */}
           <aside
             aria-label="Filtros del catálogo"
             className={`hidden w-64 shrink-0 self-start lg:sticky lg:block ${
-              f.marca ? "lg:top-[124px]" : "lg:top-[84px]"
+              f.marca ? "lg:top-[172px]" : "lg:top-[120px]"
             }`}
           >
-            <div className="carta p-5">
-              <h2 className="rotulo text-tinta-suave">Filtra el catálogo</h2>
+            <div className="lamina p-5">
+              <h2 className="rotulo-tecnico text-[13px] text-tinta-suave">
+                Filtra el catálogo
+              </h2>
               <div className="mt-4">
                 <PanelFiltros
                   key={clavePanel}
@@ -351,12 +362,12 @@ export default async function PaginaCatalogo(props: PropsCatalogo) {
 
           <div className="min-w-0 flex-1">
             {/* Móvil: mismos filtros en un colapsable arriba de los resultados. */}
-            <details className="carta mb-5 lg:hidden">
-              <summary className="flex cursor-pointer select-none items-center gap-2 px-4 py-3.5 font-display text-sm font-bold uppercase tracking-[0.06em]">
+            <details className="lamina mb-5 lg:hidden">
+              <summary className="rotulo-tecnico flex min-h-12 cursor-pointer select-none items-center gap-2 px-4 py-3.5 text-sm">
                 <SlidersHorizontal aria-hidden className="size-4" />
                 Filtrar resultados
               </summary>
-              <div className="border-t border-borde p-4">
+              <div className="border-t border-linea p-4">
                 <PanelFiltros
                   key={clavePanel}
                   marcas={f.marcas}
@@ -368,6 +379,9 @@ export default async function PaginaCatalogo(props: PropsCatalogo) {
 
             {resultado.productos.length > 0 ? (
               <>
+                {/* El listado necesita su propio encabezado para que el orden
+                    h1 → h2 → h3 de las fichas no se salte un nivel. */}
+                <h2 className="sr-only">Partidas del catálogo</h2>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-4">
                   {resultado.productos.map((p) => (
                     <TarjetaProducto key={p.codigo} p={p} />

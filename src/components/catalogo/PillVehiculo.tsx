@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { X } from "lucide-react";
 
-// Pill de vehiculo activa: barra sticky bajo el header (h-16 + filo ambar de
-// 4px = 68px) con el chip "NISSAN VERSA 2016 ✕" y el conteo de resultados.
-// La ✕ regresa al catalogo completo (/refacciones).
+// El renglón de vehículo activo: barra fija bajo el header con el vehículo
+// filtrado y el conteo de partidas. Va en campo azul —pegada al header y sobre
+// el cajetín de la página— porque una franja blanca aquí partiría el mástil.
+//
+// Alturas del header: 64px de banda + 4px de filo ámbar en móvil; en sm+ se
+// suma la cinta utilitaria de 36px.
 
 export function PillVehiculo({
   etiqueta,
@@ -19,21 +22,19 @@ export function PillVehiculo({
       : `${total.toLocaleString("es-MX")} piezas encontradas`;
 
   return (
-    // Grafito, no blanco: pegada bajo el header oscuro y sobre el encabezado
-    // grafito de la página, una franja blanca aquí partiría el mástil en dos.
-    <div className="sobre-grafito sticky top-[68px] z-40 bg-grafito/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
-        <span className="inline-flex items-center gap-1 rounded-lg border border-white/20 bg-white/10 py-1 pl-3.5 pr-1 font-display text-sm font-bold uppercase tracking-[0.06em] text-white">
-          {etiqueta}
+    <div className="sobre-plano sticky top-[68px] z-40 border-b border-white/15 bg-plano sm:top-[104px]">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2">
+        <span className="flex h-11 items-center gap-1 rounded-md border border-white/25 bg-white/10 pl-3.5">
+          <span className="rotulo-tecnico text-sm text-white">{etiqueta}</span>
           <Link
             href="/refacciones"
             aria-label={`Quitar el filtro de vehículo ${etiqueta}`}
-            className="flex size-7 items-center justify-center rounded-md transition-colors duration-150 hover:bg-white/15"
+            className="flex size-11 items-center justify-center rounded-md text-white/75 transition-colors duration-150 hover:bg-white/15 hover:text-white"
           >
-            <X aria-hidden className="size-3.5" />
+            <X aria-hidden className="size-4" />
           </Link>
         </span>
-        <span className="num-tab text-sm text-slate-400">{conteo}</span>
+        <span className="num-tab text-sm text-white/70">{conteo}</span>
       </div>
     </div>
   );

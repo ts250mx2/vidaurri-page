@@ -100,18 +100,18 @@ export default async function PaginaUsadas({
   return (
     <>
       <EncabezadoPagina
-        rotulo="Bodega Usado"
-        titulo={
-          <>
-            Piezas usadas con <span className="placa-ambar">foto real</span>
-          </>
-        }
+        titulo="Piezas usadas con foto real"
         descripcion={subtitulo}
         migas={[{ nombre: "Inicio", href: "/" }, { nombre: "Usadas" }]}
+        documento={
+          resultado && totalPaginas > 1
+            ? `Hoja ${resultado.page} de ${totalPaginas}`
+            : undefined
+        }
       >
-        <p className="mt-4 text-sm text-slate-300">
-          Cada pieza usada es <strong className="text-white">única</strong>. Si te
-          late, apártala hoy por WhatsApp.
+        <p className="mt-4 max-w-[65ch] text-sm text-white/75">
+          Cada pieza usada es <strong className="text-white">única</strong>: cuando
+          se va, se acabó. Si te late, apártala hoy por WhatsApp.
         </p>
       </EncabezadoPagina>
 
@@ -152,24 +152,19 @@ export default async function PaginaUsadas({
             />
           ) : (
             <>
-              <p className="mb-4 text-sm text-tinta-suave">
-                <span className="font-mono num-tab font-semibold text-tinta">
+              {/* Encabezado del listado: sin él, el h1 de la página saltaría
+                  directo al h3 de cada ficha. */}
+              <h2 className="sr-only">Piezas usadas encontradas</h2>
+              <p className="mb-4 border-b border-linea pb-3 text-sm text-tinta-suave">
+                <span className="num-tab font-mono font-semibold text-tinta">
                   {resultado.total.toLocaleString("es-MX")}
                 </span>{" "}
                 {resultado.total === 1 ? "pieza encontrada" : "piezas encontradas"}
-                {totalPaginas > 1 && (
-                  <>
-                    {" "}
-                    · página{" "}
-                    <span className="font-mono num-tab">{resultado.page}</span> de{" "}
-                    <span className="font-mono num-tab">{totalPaginas}</span>
-                  </>
-                )}
               </p>
 
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-4">
-                {resultado.piezas.map((pieza) => (
-                  <TarjetaUsada key={pieza.id} p={pieza} />
+                {resultado.piezas.map((pieza, i) => (
+                  <TarjetaUsada key={pieza.id} p={pieza} indice={i} />
                 ))}
               </div>
 
@@ -184,7 +179,7 @@ export default async function PaginaUsadas({
           )}
         </section>
 
-        <p className="mt-10 text-xs text-tinta-suave">
+        <p className="mt-12 max-w-[65ch] text-xs leading-relaxed text-tinta-suave">
           Aquí les decimos como tú les digas: facia o defensa, calavera o stop,
           cofre o capó, salpicadera o aleta.
         </p>

@@ -7,8 +7,12 @@ import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { TituloSeccion } from "@/components/TituloSeccion";
 
 // Puerta B2B: talleres de hojalatería y pintura, refaccionarias y aseguradoras.
-// Solo datos reales del negocio (nada de cifras de descuento inventadas): trato
-// de mayoreo, catálogo de 42,000+ códigos y factura CFDI 4.0.
+// Solo datos reales del negocio (nada de porcentajes de descuento inventados):
+// trato de mayoreo, catálogo de 42,000+ códigos y factura CFDI 4.0.
+//
+// Los tres perfiles NO van en una parrilla de tarjetas iguales: van como los
+// renglones de una hoja de especificación, separados por el filete del plano.
+// Quien compra para trabajar lee listas, no mosaicos.
 
 export const metadata: Metadata = {
   title: {
@@ -42,61 +46,56 @@ const PERFILES = [
 ] as const;
 
 const CLASE_BOTON_TEL =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-6 py-3.5 font-display text-sm font-bold uppercase tracking-wide text-white transition-colors duration-150 hover:border-white/40";
+  "rotulo-tecnico inline-flex min-h-12 items-center justify-center gap-1.5 rounded-md border border-white/20 bg-white/5 px-6 text-sm text-white transition-colors duration-150 hover:border-white/50 hover:bg-white/10";
 
 export default function PaginaMayoreo() {
   return (
     <>
       <EncabezadoPagina
-        rotulo="Negocio a negocio"
         titulo="Mayoreo para talleres, refaccionarias y aseguradoras"
         descripcion="Si compras piezas de colisión para trabajar, te atendemos como negocio: precios de mayoreo, cotizaciones completas por valuación y factura en cada compra."
         migas={[{ nombre: "Inicio", href: "/" }, { nombre: "Mayoreo" }]}
       />
 
-      <section className="bg-fondo">
+      <section className="bg-papel">
         <div className="mx-auto max-w-6xl px-4 py-14 md:py-20">
-          <TituloSeccion
-            rotulo="A quién surtimos"
-            titulo="Tres formas de comprarnos como negocio"
-          />
+          <TituloSeccion titulo="Tres formas de comprarnos como negocio" />
 
-          <div className="mt-8 grid gap-3 md:grid-cols-3 md:gap-4">
-            {PERFILES.map((p, i) => (
-              <article
+          <ul className="mt-8 divide-y divide-linea border-b border-linea">
+            {PERFILES.map((p) => (
+              <li
                 key={p.titulo}
-                className="carta relative flex flex-col overflow-hidden p-6"
+                className="grid gap-x-8 gap-y-2 py-7 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]"
               >
-                <span
-                  aria-hidden
-                  className="titulo-cartel pointer-events-none absolute -top-3 right-3 select-none text-[5.5rem] text-tinta/[0.055]"
-                >
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="inline-flex size-11 items-center justify-center rounded-lg border border-borde bg-fondo">
-                  <p.icono aria-hidden className="size-5 text-tinta" />
-                </span>
-                <h2 className="titulo-display mt-4 text-xl">{p.titulo}</h2>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-tinta-suave">
+                <h3 className="flex items-start gap-2.5">
+                  <p.icono
+                    aria-hidden
+                    className="mt-0.5 size-5 shrink-0 text-tinta-suave"
+                  />
+                  <span className="rotulo-tecnico text-lg leading-tight text-tinta">
+                    {p.titulo}
+                  </span>
+                </h3>
+                <p className="max-w-[68ch] text-[15px] leading-relaxed text-tinta-suave">
                   {p.texto}
                 </p>
-              </article>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
       {/* Facturación: el dato duro que un comprador de negocio busca primero. */}
-      <section className="trama-rejilla border-y border-borde bg-superficie">
-        <div className="mx-auto flex max-w-6xl items-start gap-5 px-4 py-12 md:items-center md:py-14">
-          <span className="hidden size-14 shrink-0 items-center justify-center rounded-xl border border-borde bg-fondo md:inline-flex">
+      <section className="border-y border-linea bg-hoja">
+        <div className="mx-auto flex max-w-6xl items-start gap-5 px-4 py-12 md:items-center md:py-16">
+          <span className="hidden size-14 shrink-0 items-center justify-center rounded-md border border-linea bg-papel md:inline-flex">
             <FileText aria-hidden className="size-6 text-tinta" />
           </span>
           <div>
-            <h2 className="titulo-cartel text-[clamp(1.9rem,4.4vw,2.9rem)]">
-              <span className="marcador-ambar">Facturamos CFDI 4.0</span>
+            <h2 className="titulo-lamina text-[clamp(1.9rem,4.4vw,2.9rem)]">
+              Facturamos CFDI 4.0
             </h2>
-            <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-tinta-suave">
+            <p className="mt-4 max-w-[68ch] text-[15px] leading-relaxed text-tinta-suave">
               Emitimos factura CFDI 4.0 por todas tus compras, de mostrador o de
               mayoreo. Compra como negocio con los papeles en regla.
             </p>
@@ -104,26 +103,22 @@ export default function PaginaMayoreo() {
         </div>
       </section>
 
-      {/* CTA de conversión: WhatsApp primero, teléfono después, QR solo desktop. */}
-      <section className="sobre-grafito relative isolate overflow-hidden border-y-4 border-ambar bg-grafito-hondo text-white">
-        <span
-          aria-hidden
-          className="trama-rejilla-oscura absolute inset-0 opacity-70"
-        />
+      {/* CTA de conversión: WhatsApp primero, teléfono después, QR solo en
+          escritorio. Sobre el campo azul el foco se dibuja en ámbar. */}
+      <section className="sobre-plano relative isolate overflow-hidden bg-plano-hondo text-white">
         <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 py-14 md:flex-row md:items-center md:py-20">
           <div className="flex-1">
             <TituloSeccion
-              rotulo="Siguiente paso"
               titulo="Arranca con una cotización"
               descripcion="Mándanos tu lista de piezas o la valuación completa y te regresamos precios de mayoreo con IVA incluido."
               tono="oscuro"
             />
-            <div className="mt-7 flex flex-wrap items-center gap-3">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <a
                 href={urlWhatsApp(PRELLENADOS.mayoreo)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg bg-whatsapp px-6 py-3.5 font-display text-sm font-bold uppercase tracking-wide text-white transition-opacity duration-150 hover:opacity-90"
+                className="rotulo-tecnico inline-flex min-h-12 items-center gap-2 rounded-md bg-whatsapp px-6 text-sm text-plano-hondo transition-[filter] duration-150 hover:brightness-95 active:brightness-90"
               >
                 <IconWhatsApp lado={18} />
                 Cotización de mayoreo por WhatsApp
@@ -133,8 +128,8 @@ export default function PaginaMayoreo() {
                 Llamar {NEGOCIO.telefonoBonito}
               </a>
             </div>
-            <p className="mt-3 text-xs text-slate-400">
-              Respondemos en minutos en horario hábil.
+            <p className="mt-3.5 text-xs text-white/70">
+              Vico te cotiza al momento, 24/7.
             </p>
           </div>
 

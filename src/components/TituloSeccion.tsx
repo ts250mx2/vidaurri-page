@@ -1,12 +1,17 @@
 import clsx from "clsx";
 
-// Encabezado de sección del "Mostrador": filo neutro + rótulo de anaquel + H2
-// en Barlow. Es el mismo objeto gráfico en todo el sitio, así el ritmo de las
-// páginas se lee como un sistema y no como una suma de bloques sueltos.
+// Encabezado de sección: rotulado del plano y un filete fino que lo separa de
+// lo que viene abajo, como el renglón de título de una lámina. Es el mismo
+// objeto gráfico en todo el sitio, así el ritmo de las páginas se lee como un
+// sistema y no como una suma de bloques sueltos.
+//
+// Aquí NO hay etiqueta-rótulo sobre el título: el título carga solo. La prop
+// `rotulo` sigue declarada para no romper a quien todavía la pasa, pero no se
+// renderiza.
+//
 // Nunca lleva ámbar: el ámbar solo aparece donde hay algo que tocar.
 
 export function TituloSeccion({
-  rotulo,
   titulo,
   descripcion,
   accion,
@@ -14,8 +19,8 @@ export function TituloSeccion({
   como: Como = "h2",
   className,
 }: {
-  /** Etiqueta chica sobre el título (ej. "Catálogo"). */
-  rotulo: string;
+  /** Ignorada. Resto del mundo anterior; ya no se renderiza. */
+  rotulo?: string;
   titulo: React.ReactNode;
   descripcion?: React.ReactNode;
   /** Enlace o botón alineado a la derecha en desktop. */
@@ -30,48 +35,36 @@ export function TituloSeccion({
   return (
     <div
       className={clsx(
-        "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8",
+        "border-b pb-4",
+        oscuro ? "border-white/20" : "border-linea-fuerte",
         className
       )}
     >
-      <div className="max-w-2xl">
-        <p className="flex items-center gap-2.5">
-          <span
-            aria-hidden
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+        <div className="min-w-0">
+          <Como
             className={clsx(
-              "h-px w-7 shrink-0",
-              oscuro ? "bg-white/35" : "bg-borde-fuerte"
+              "rotulo-tecnico text-[clamp(1.5rem,3.4vw,2.05rem)] leading-[1.05]",
+              oscuro ? "text-white" : "text-tinta"
             )}
-          />
-          <span
-            className={clsx("rotulo", oscuro ? "text-white/60" : "text-tinta-suave")}
           >
-            {rotulo}
-          </span>
-        </p>
+            {titulo}
+          </Como>
 
-        <Como
-          className={clsx(
-            "titulo-cartel mt-2.5 text-[clamp(1.9rem,4.4vw,2.9rem)]",
-            oscuro ? "text-white" : "text-tinta"
+          {descripcion && (
+            <p
+              className={clsx(
+                "mt-3 max-w-[68ch] text-[15px] leading-relaxed",
+                oscuro ? "text-white/75" : "text-tinta-suave"
+              )}
+            >
+              {descripcion}
+            </p>
           )}
-        >
-          {titulo}
-        </Como>
+        </div>
 
-        {descripcion && (
-          <p
-            className={clsx(
-              "mt-2.5 text-[15px] leading-relaxed",
-              oscuro ? "text-slate-300" : "text-tinta-suave"
-            )}
-          >
-            {descripcion}
-          </p>
-        )}
+        {accion && <div className="shrink-0 sm:pb-1">{accion}</div>}
       </div>
-
-      {accion && <div className="shrink-0 sm:pb-1.5">{accion}</div>}
     </div>
   );
 }

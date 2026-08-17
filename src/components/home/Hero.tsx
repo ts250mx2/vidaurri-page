@@ -1,36 +1,31 @@
 import Link from "next/link";
-import { Layers, Tag, Truck } from "lucide-react";
 import type { Marca, TipoParte } from "@/lib/catalogo";
 import { SelectorVehiculo } from "@/components/SelectorVehiculo";
-import { MuroPiezas } from "@/components/home/MuroPiezas";
+import { TarjetaVico } from "@/components/home/TarjetaVico";
+import { IndicadoresVitrina } from "@/components/home/Vitrina";
+import {
+  IconoClipboardGold3D,
+  IconoCajaGold3D,
+  IconoPinGold3D,
+} from "@/components/Iconos3D";
 
-// HERO de la home: letrero corto y buscador, nada más. Mide la mitad de lo que
-// medía a propósito — esto es una refaccionaria, no una portada de agencia: la
-// mercancía con precio tiene que alcanzar a asomarse en la primera pantalla.
-// El fondo sigue siendo foto REAL del catálogo fundida en grafito (MuroPiezas),
-// el buscador es lo más brillante de la pantalla, y a la derecha van tres
-// señales de venta en lista plana. Se retiró el abanico de fichas rotadas: se
-// leía como portafolio de diseñador, no como mostrador.
-
-export interface TipoPopular {
-  id: number;
-  nombre: string;
-}
-
-/** Ficha del abanico que vestía el hero. El abanico ya no se dibuja, pero la
- *  home sigue armando y mandando `pila`: el tipo se conserva para no romper esa
- *  llamada mientras se limpia `page.tsx`. */
-export interface PiezaPila {
-  etiqueta: string;
-  codigo: string;
-}
-
-/** Lo que un cliente quiere saber antes de teclear la marca de su coche. Texto
- *  corto e icono neutro: aquí no hay nada que tocar, así que no hay ámbar. */
-const SENALES_VENTA = [
-  { Icono: Tag, texto: "Precio con IVA a la vista" },
-  { Icono: Layers, texto: "Nuevas, usadas y sobre pedido" },
-  { Icono: Truck, texto: "Recoge hoy en Monterrey o te la enviamos" },
+/** Las tres razones principales en panel de cristal con iconos 3D dorados */
+const SENALES = [
+  {
+    ComponenteIcono: IconoClipboardGold3D,
+    linea1: "PRECIO CON IVA",
+    linea2: "A LA VISTA",
+  },
+  {
+    ComponenteIcono: IconoCajaGold3D,
+    linea1: "NUEVAS, USADAS",
+    linea2: "Y SOBRE PEDIDO",
+  },
+  {
+    ComponenteIcono: IconoPinGold3D,
+    linea1: "RECOGE HOY EN",
+    linea2: "MONTERREY O TE LA ENVIAMOS",
+  },
 ] as const;
 
 export function Hero({
@@ -38,76 +33,95 @@ export function Hero({
   tipos,
   subtitulo,
   populares,
-  codigosMuro,
 }: {
   marcas: Marca[];
   tipos: TipoParte[];
   subtitulo: string;
-  populares: TipoPopular[];
-  /** Códigos con foto verificada para el muro del fondo. */
-  codigosMuro: string[];
-  /** Alimentaba el abanico de fichas; ya no se usa. Se mantiene en la firma
-   *  para que la home actual siga compilando. */
-  pila?: PiezaPila[];
+  populares: Array<{ id: number; nombre: string }>;
 }) {
   return (
-    <section className="sobre-grafito relative isolate overflow-hidden bg-grafito-hondo text-white">
-      <MuroPiezas codigos={codigosMuro} />
-      <span aria-hidden className="velo-hero absolute inset-0" />
+    <section
+      aria-labelledby="hero-titulo"
+      className="sobre-plano relative text-white"
+    >
+      {/* Sin fondo propio: el carrusel vive en el contenedor de la vitrina
+          (page.tsx) para que la MISMA foto corra por detrás del hero y de la
+          tira de credenciales, en vez de cortarse entre los dos.
 
-      <div className="relative mx-auto max-w-6xl px-4 py-8 md:py-10">
-        <div className="grid items-center gap-6 md:grid-cols-[1.15fr_0.85fr] md:gap-10">
-          <div>
-            <p className="flex items-center gap-2.5">
-              <span aria-hidden className="h-px w-7 shrink-0 bg-white/35" />
-              <span className="rotulo text-white/70">
-                Refacciones de colisión · Monterrey
+          El padding superior no es respiro, es mecánica: el header flota
+          (position: absolute) y no reserva espacio en el flujo, así que sin
+          esto la cinta y la navegación se comen el titular y los dos primeros
+          campos del buscador. Cinta + nav + filo ≈ 103px desde `sm`; en móvil
+          la cinta no se pinta y bastan ~70px. */}
+      <div className="relative mx-auto max-w-7xl px-4 pb-8 pt-[84px] sm:pt-[124px] md:pb-12 md:pt-[128px]">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.2fr)_auto_minmax(0,22rem)] lg:gap-8">
+          {/* Columna 1 — Titular principal */}
+          <div className="flex flex-col justify-start pt-1">
+            <h1
+              id="hero-titulo"
+              className="titulo-lamina sombra-lectura flex flex-col items-start font-extrabold uppercase leading-[1.05] tracking-tight text-white text-3xl sm:text-4xl lg:text-[3.2rem]"
+            >
+              <span>¿CHOCASTE?</span>
+              <span className="mt-2 flex flex-wrap items-center gap-2.5">
+                <span>TENEMOS</span>
+                <span className="marco-oro text-[#f0d97d]">TU PIEZA.</span>
               </span>
-            </p>
-
-            {/* Interlineado 1.06 (no el 0.98 de .titulo-cartel): la placa ámbar
-                mide ~1.15em y con el interlineado cerrado pisaría el renglón de
-                arriba cuando el título parte en dos. */}
-            <h1 className="titulo-cartel mt-3 text-[clamp(1.9rem,4.2vw,3rem)] leading-[1.06]">
-              ¿Chocaste? Tenemos <span className="placa-ambar">tu pieza</span>.
             </h1>
 
-            <p className="mt-3 max-w-xl text-sm leading-snug text-slate-300 md:text-[15px]">
+            <p className="mt-5 max-w-[42ch] text-[14.5px] leading-relaxed text-white/80">
               {subtitulo}
             </p>
+
+            {/* Indicadores del carrusel: aquí, bajo el subtítulo, donde hay
+                foto libre. Al pie del bloque caían encima de la última
+                credencial de la tira y la tapaban. */}
+            <IndicadoresVitrina className="mt-6 self-start" />
           </div>
 
-          {/* En móvil estas señales estorbarían entre el título y el buscador;
-              ahí las levanta la franja de confianza que va abajo del hero. */}
-          <ul className="carta-oscura hidden divide-y divide-white/10 md:block">
-            {SENALES_VENTA.map(({ Icono, texto }) => (
-              <li key={texto} className="flex items-center gap-3 px-4 py-3">
-                <Icono aria-hidden className="size-4 shrink-0 text-slate-400" />
-                <span className="text-[13px] font-medium leading-snug text-slate-100">
-                  {texto}
-                </span>
-              </li>
+          {/* Columna 2 — Panel vertical de cristal ajustado a la altura alineada */}
+          <div className="panel-vitrina flex flex-col justify-around gap-4 rounded-2xl border border-white/20 bg-gradient-to-b from-white/10 to-black/40 p-4.5 shadow-2xl backdrop-blur-lg lg:w-[215px] lg:self-stretch">
+            {SENALES.map(({ ComponenteIcono, linea1, linea2 }) => (
+              <div key={linea1 + linea2} className="flex items-center gap-3.5">
+                <div className="shrink-0 drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)]">
+                  <ComponenteIcono className="size-11" />
+                </div>
+                <div className="rotulo-tecnico text-[11.5px] font-bold leading-snug tracking-wider text-white">
+                  <div>{linea1}</div>
+                  <div>{linea2}</div>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
+
+          {/* Columna 3 — Buscador de vehículo y Tarjeta Vico */}
+          <div className="flex flex-col gap-2.5">
+            <SelectorVehiculo
+              marcas={marcas}
+              tipos={tipos}
+              tono="oscuro"
+              compacto
+            />
+            <TarjetaVico />
+          </div>
         </div>
 
-        <div className="mt-5">
-          <SelectorVehiculo marcas={marcas} tipos={tipos} tono="oscuro" />
-        </div>
-
+        {/* Lo más buscado */}
         {populares.length > 0 && (
-          <p className="mt-3 flex flex-wrap items-center gap-2 px-1 text-sm text-slate-400">
-            <span className="rotulo text-white/50">Lo más buscado</span>
+          <nav
+            aria-label="Tipos de pieza más buscados"
+            className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-white/10 pt-4"
+          >
+            <span className="mr-2 text-[13px] font-medium text-white/70">Lo más buscado:</span>
             {populares.map((p) => (
               <Link
                 key={p.id}
                 href={`/refacciones?parte=${p.id}`}
-                className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 font-display text-xs font-semibold uppercase tracking-wide text-slate-200 transition-colors duration-150 hover:border-white/40 hover:text-white"
+                className="inline-flex items-center rounded-md border border-white/30 bg-white/10 px-3.5 py-1.5 font-display text-[11.5px] font-bold uppercase tracking-wider text-white transition-all duration-150 hover:border-white hover:bg-white/20"
               >
                 {p.nombre}
               </Link>
             ))}
-          </p>
+          </nav>
         )}
       </div>
     </section>

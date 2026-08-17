@@ -14,6 +14,7 @@ import {
   type PiezaUsadaResumen,
 } from "@/lib/usadas";
 import { Hero } from "@/components/home/Hero";
+import { Vitrina } from "@/components/home/Vitrina";
 import { FranjaConfianza } from "@/components/home/FranjaConfianza";
 import { VitrinaDestacados } from "@/components/home/VitrinaDestacados";
 import { MosaicosTipos, type MosaicoTipo } from "@/components/home/MosaicosTipos";
@@ -143,21 +144,16 @@ export default async function PaginaInicio() {
     .slice(0, MAX_POPULARES)
     .map((d) => ({ id: d.id, nombre: d.corto }));
 
-  // El muro del hero se viste con las mismas fotos ya verificadas de los
-  // mosaicos. Si el S3 no resolvió ninguna, queda grafito liso y no se rompe.
-  const codigosMuro = destacados.flatMap((d) => {
-    const codigo = muestras.get(d.id);
-    return codigo ? [codigo] : [];
+  // Mercancía con foto verificada para la vitrina. El hero ya no necesita
+  // piezas: su fondo es el carrusel de la propia bodega, así que esta es la
+  // única consulta de surtido y sus 12 fotos no se verifican dos veces.
+  const vitrina = await productosDeVitrina(
+    destacados.map((d) => d.id),
+    12
+  ).catch((error) => {
+    console.error("No se pudo armar la vitrina de la home:", error);
+    return [] as ProductoResumen[];
   });
-
-  // Mercancía real con precio para la vitrina: es lo que hace que la portada
-  // se sienta tienda. Si falla, la sección simplemente no se pinta.
-  const vitrina = await productosDeVitrina(destacados.map((d) => d.id), 12).catch(
-    (error) => {
-      console.error("No se pudo armar la vitrina de la home:", error);
-      return [] as ProductoResumen[];
-    }
-  );
 
   const piezasNuevas =
     resumen && resumen.piezasNuevas > 0 ? resumen.piezasNuevas : null;
@@ -175,14 +171,18 @@ export default async function PaginaInicio() {
       {/* Orden comercial: buscador, credenciales, y ENSEGUIDA mercancía con
           precio. Las secciones de servicio (asistente, mayoreo, sucursales)
           van después: en una tienda primero se ve lo que hay. */}
-      <Hero
-        marcas={marcas}
-        tipos={tipos}
-        subtitulo={subtitulo}
-        populares={populares}
-        codigosMuro={codigosMuro}
-      />
-      <FranjaConfianza piezasNuevas={piezasNuevas} piezasUsadas={piezasUsadas} />
+      {/* LA VITRINA: el carrusel de la bodega corre por detrás del hero Y de la
+          tira de credenciales, como una sola foto. Antes el fondo terminaba con
+          el hero y la tira quedaba cortada sobre un color plano. */}
+      <Vitrina>
+        <Hero
+          marcas={marcas}
+          tipos={tipos}
+          subtitulo={subtitulo}
+          populares={populares}
+        />
+        <FranjaConfianza piezasNuevas={piezasNuevas} piezasUsadas={piezasUsadas} />
+      </Vitrina>
       <VitrinaDestacados productos={vitrina} />
       <MosaicosTipos items={mosaicos} />
       <UsadasRecientes piezas={usadas} />

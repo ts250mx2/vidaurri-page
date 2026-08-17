@@ -18,24 +18,30 @@ export const NEGOCIO = {
   /** Nombre del asistente IA de la página y de WhatsApp. */
   asistente: "Vico",
 
-  // PENDIENTE: confirmar teléfonos reales de sucursal.
+  /** Teléfono general de la casa. Es el único verificado (fuentes públicas).
+   *  PENDIENTE: si cada sucursal tiene su propia línea, agrégala abajo. */
   telefono: "+52 81 8354 2999",
   telefonoBonito: "(81) 8354 2999",
 
-  // PENDIENTE: confirmar direcciones, horarios y ligas de Google Maps.
+  // Direcciones tomadas de fuentes públicas.
+  // `telefono` por sucursal: se omite a propósito mientras no esté confirmado.
+  // Publicar el número de la matriz en las dos sucursales manda a quien llama a
+  // Fierro con la matriz, y eso quema una venta.
+  // `horario`: PENDIENTE. Mientras no lo confirme el cliente NO se publica —
+  // un cliente que llega el sábado y encuentra cerrado no vuelve.
   sucursales: [
     {
       nombre: "Matriz",
       direccion: "Jesús M. Garza 2616, Col. Pablo A. de la Garza, 64550 Monterrey, N.L.",
-      telefono: "+52 81 8354 2999",
-      horario: "Lunes a viernes 8:30–18:00 · Sábado 8:30–14:00",
+      telefono: undefined as string | undefined,
+      horario: undefined as string | undefined,
       mapsUrl: "https://maps.google.com/?q=Autopartes+Vidaurri+Jesus+M+Garza+2616+Monterrey",
     },
     {
       nombre: "Sucursal Fierro",
       direccion: "Antonio I. Villarreal 1421, Col. Fierro, Monterrey, N.L.",
-      telefono: "+52 81 8354 2999",
-      horario: "Lunes a viernes 8:30–18:00 · Sábado 8:30–14:00",
+      telefono: undefined as string | undefined,
+      horario: undefined as string | undefined,
       mapsUrl: "https://maps.google.com/?q=Autopartes+Vidaurri+Antonio+I+Villarreal+1421+Monterrey",
     },
   ],

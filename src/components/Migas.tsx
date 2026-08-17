@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import clsx from "clsx";
 
-// Migas de pan del sitio. El último elemento nunca es enlace (es la página
-// actual) y se marca con aria-current. El tono "oscuro" es el de los
-// encabezados grafito de las páginas internas.
+// Migas de pan: la ruta de la hoja dentro del plano. El último elemento nunca
+// es enlace (es la página actual) y se marca con aria-current. El tono
+// "oscuro" es el del cajetín azul con el que abren las páginas internas.
 
 export interface Miga {
   nombre: string;
@@ -29,7 +29,7 @@ export function Migas({
       <ol
         className={clsx(
           "flex flex-wrap items-center gap-x-1 gap-y-1 text-[13px]",
-          oscuro ? "text-slate-400" : "text-tinta-suave"
+          oscuro ? "text-white/65" : "text-tinta-suave"
         )}
       >
         {items.map((m, i) => {
@@ -56,7 +56,7 @@ export function Migas({
                 <Link
                   href={m.href}
                   className={clsx(
-                    "truncate underline-offset-4 transition-colors duration-150 hover:underline",
+                    "-my-1 truncate py-1 underline-offset-4 transition-colors duration-150 hover:underline",
                     oscuro ? "hover:text-white" : "hover:text-tinta"
                   )}
                 >

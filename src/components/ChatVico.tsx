@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MessageSquareText, Phone, RotateCcw, Send, X } from "lucide-react";
+import {
+  MessageSquareText,
+  Phone,
+  RotateCcw,
+  Send,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import clsx from "clsx";
 import { LogoAV } from "@/components/LogoAV";
 import { IconWhatsApp } from "@/components/IconWhatsApp";
@@ -11,11 +18,19 @@ import { NEGOCIO, urlWhatsApp, PRELLENADOS } from "@/config/negocio";
 // Chat "Vico": el Vendedor IA de Vidaurri en la web. Habla con el MISMO
 // webservice que atiende WhatsApp (via /api/chat, la key nunca llega aqui).
 // IA siempre visible y con salida humana permanente (telefono + WhatsApp).
+//
+// Revestido del mundo: el encabezado es campo azul con su filo ámbar, el hilo
+// se lee sobre papel, lo que dice Vico va en lámina blanca con borde de línea
+// y lo que escribe el cliente en tinta de plano. Las fallas se anotan en rojo,
+// como la corrección del ajustador. El lanzador flotante es azul con anillo
+// ámbar: nunca verde, para que jamás se confunda con WhatsApp.
 
 interface Mensaje {
   rol: "vico" | "cliente";
   texto: string;
   fotos?: Array<{ codigo: string; url: string }>;
+  /** Rótulo de la falla (tinta de anotación). Ausente = mensaje normal. */
+  falla?: string;
 }
 
 const CLAVE_SESION = "vico.sesion";
@@ -67,6 +82,10 @@ export function ChatVico() {
     } catch {
       // historial corrupto: se parte de cero
     }
+    // La invitación solo se ofrece en la portada. En una ficha o en el catálogo
+    // el cliente ya tiene los botones de cotizar delante, y ahí el globo tapaba
+    // contenido real — en la ficha se comía la leyenda del QR.
+    if (window.location.pathname !== "/") return;
     const t = setTimeout(() => setPill(true), 800);
     const t2 = setTimeout(() => setPill(false), 800 + MS_PILL);
     return () => {
@@ -119,14 +138,16 @@ export function ChatVico() {
           { rol: "vico", texto: datos.respuesta!, fotos: datos.fotos ?? [] },
         ]);
       } else {
+        const saturado =
+          datos?.error === "Demasiados mensajes seguidos; espera un momento";
         setMensajes((m) => [
           ...m,
           {
             rol: "vico",
-            texto:
-              datos?.error === "Demasiados mensajes seguidos; espera un momento"
-                ? "Me están llegando muchos mensajes seguidos 🙏 Espera un momentito y vuelve a intentar."
-                : `Se me cayó el sistema un segundo 🙏 Inténtalo de nuevo, o escríbenos directo por WhatsApp al ${NEGOCIO.whatsappBonito}.`,
+            falla: saturado ? "Muchos mensajes seguidos" : "No pude responder",
+            texto: saturado
+              ? "Me están llegando muchos mensajes seguidos. Espera un momentito y vuelve a intentar."
+              : `Se me cayó el sistema un segundo. Inténtalo de nuevo, o escríbenos directo por WhatsApp al ${NEGOCIO.whatsappBonito}.`,
           },
         ]);
       }
@@ -135,6 +156,7 @@ export function ChatVico() {
         ...m,
         {
           rol: "vico",
+          falla: "Sin conexión",
           texto: `No pude conectar con el mostrador. Revisa tu señal e inténtalo de nuevo, o escríbenos por WhatsApp al ${NEGOCIO.whatsappBonito}.`,
         },
       ]);
@@ -176,7 +198,7 @@ export function ChatVico() {
       {/* Lanzador flotante: solo desktop (en movil vive en la barra inferior). */}
       <div className="fixed bottom-6 right-6 z-40 hidden items-center gap-3 md:flex">
         {pill && !abierto && (
-          <span className="rounded-full border border-borde bg-superficie px-3.5 py-2 text-sm font-semibold shadow-md">
+          <span className="rounded-md border border-linea bg-hoja px-3.5 py-2 text-sm font-semibold text-tinta shadow-lamina-alta">
             ¿Qué pieza buscas? Cotiza aquí
           </span>
         )}
@@ -184,7 +206,7 @@ export function ChatVico() {
           type="button"
           onClick={() => setAbierto((v) => !v)}
           aria-label={abierto ? "Cerrar chat con Vico" : "Abrir chat con Vico"}
-          className="flex size-14 items-center justify-center rounded-full bg-grafito text-white shadow-lg ring-2 ring-ambar transition-transform hover:scale-105"
+          className="flex size-14 items-center justify-center rounded-full bg-plano text-white shadow-flotante ring-2 ring-ambar transition-transform duration-150 hover:scale-105 active:scale-100"
         >
           <MessageSquareText aria-hidden className="size-6" />
         </button>
@@ -195,90 +217,110 @@ export function ChatVico() {
           role="dialog"
           aria-label={`Chat con ${NEGOCIO.asistente}, asistente IA de Autopartes Vidaurri`}
           className={clsx(
-            "fixed inset-0 z-50 flex flex-col bg-fondo",
+            "fixed inset-0 z-50 flex flex-col bg-papel",
             "md:inset-auto md:bottom-6 md:right-6 md:h-[620px] md:max-h-[calc(100vh-4rem)]",
-            "md:w-[390px] md:overflow-hidden md:rounded-xl md:border md:border-borde md:shadow-2xl"
+            "md:w-[390px] md:overflow-hidden md:rounded-lg md:border md:border-linea-fuerte md:shadow-flotante"
           )}
         >
-          {/* Encabezado grafito: IA visible + salida humana permanente. */}
-          <div className="border-b-4 border-ambar bg-grafito px-4 py-3 text-white">
+          {/* Encabezado en campo azul: IA visible + salida humana permanente. */}
+          <div className="sobre-plano border-b-4 border-ambar bg-plano px-4 py-3 text-white">
             <div className="flex items-center gap-2.5">
               <LogoAV lado={34} />
               <div className="min-w-0">
-                <p className="font-display text-sm font-semibold uppercase tracking-wide">
+                <p className="rotulo-tecnico truncate text-sm">
                   {NEGOCIO.asistente} · Autopartes Vidaurri
                 </p>
-                <p className="text-[11.5px] text-slate-300">
+                <p className="truncate text-[11.5px] text-white/70">
                   Asistente IA · cotiza 24/7 con IVA incluido
                 </p>
               </div>
-              <div className="ml-auto flex items-center gap-1">
+              <div className="-mr-2 ml-auto flex items-center">
                 <button
                   type="button"
                   onClick={reiniciar}
                   aria-label="Empezar conversación nueva"
                   title="Empezar de nuevo"
-                  className="rounded-md p-2 text-slate-300 hover:text-white"
+                  className="flex size-11 items-center justify-center rounded-md text-white/75 transition-colors duration-150 hover:bg-plano-claro hover:text-white"
                 >
-                  <RotateCcw className="size-4" />
+                  <RotateCcw aria-hidden className="size-4" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setAbierto(false)}
                   aria-label="Cerrar chat"
-                  className="rounded-md p-2 text-slate-300 hover:text-white"
+                  className="flex size-11 items-center justify-center rounded-md text-white/75 transition-colors duration-150 hover:bg-plano-claro hover:text-white"
                 >
-                  <X className="size-5" />
+                  <X aria-hidden className="size-5" />
                 </button>
               </div>
             </div>
-            <div className="mt-2 flex items-center gap-3 text-[11.5px] text-slate-300">
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 text-[11.5px] text-white/70">
               <span>¿Prefieres una persona?</span>
-              <a href={`tel:${NEGOCIO.telefono}`} className="flex items-center gap-1 text-white underline-offset-2 hover:underline">
+              <a
+                href={`tel:${NEGOCIO.telefono}`}
+                className="inline-flex min-h-9 items-center gap-1 text-white underline-offset-2 hover:underline"
+              >
                 <Phone aria-hidden className="size-3" /> Llamar
               </a>
               <a
                 href={urlWhatsApp(PRELLENADOS.generico)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-white underline-offset-2 hover:underline"
+                className="inline-flex min-h-9 items-center gap-1 text-white underline-offset-2 hover:underline"
               >
-                <span className="text-whatsapp"><IconWhatsApp lado={12} /></span> WhatsApp
+                <span className="text-whatsapp">
+                  <IconWhatsApp lado={12} />
+                </span>{" "}
+                WhatsApp
               </a>
             </div>
           </div>
 
           {/* Hilo */}
-          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-            {mensajes.map((m, i) => (
-              <div
-                key={i}
-                className={clsx(
-                  "max-w-[88%] rounded-xl px-3.5 py-2.5 text-[14px] leading-relaxed",
-                  m.rol === "vico"
-                    ? "border border-borde bg-superficie"
-                    : "ml-auto bg-grafito text-white"
-                )}
-              >
-                <TextoWhatsApp texto={m.texto} />
-                {m.fotos && m.fotos.length > 0 && (
-                  <div className="mt-2 grid grid-cols-3 gap-1.5">
-                    {m.fotos.map((f) => (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        key={f.codigo}
-                        src={f.url}
-                        alt={`Foto de la pieza ${f.codigo}`}
-                        loading="lazy"
-                        className="aspect-square w-full rounded-md border border-borde bg-white object-contain"
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+          <div
+            aria-live="polite"
+            className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
+          >
+            {mensajes.map((m, i) => {
+              const esVico = m.rol === "vico";
+              return (
+                <div
+                  key={i}
+                  className={clsx(
+                    "max-w-[88%] px-3.5 py-2.5 text-[14px] leading-relaxed",
+                    esVico && !m.falla && "lamina",
+                    esVico &&
+                      m.falla &&
+                      "rounded-md border border-anotacion bg-hoja text-tinta",
+                    !esVico && "ml-auto rounded-md bg-plano text-white"
+                  )}
+                >
+                  {m.falla && (
+                    <p className="rotulo-tecnico mb-1 flex items-center gap-1.5 text-[11px] text-anotacion">
+                      <TriangleAlert aria-hidden className="size-3.5" />
+                      {m.falla}
+                    </p>
+                  )}
+                  <TextoWhatsApp texto={m.texto} />
+                  {m.fotos && m.fotos.length > 0 && (
+                    <div className="mt-2 grid grid-cols-3 gap-1.5">
+                      {m.fotos.map((f) => (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          key={f.codigo}
+                          src={f.url}
+                          alt={`Foto de la pieza ${f.codigo}`}
+                          loading="lazy"
+                          className="mesa-dibujo aspect-square w-full rounded-sm border border-linea object-contain"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             {enviando && (
-              <div className="max-w-[88%] rounded-xl border border-borde bg-superficie px-3.5 py-2.5 text-[13px] text-tinta-suave">
+              <div className="lamina max-w-[88%] px-3.5 py-2.5 text-[13px] text-tinta-suave">
                 {NEGOCIO.asistente} está buscando en el catálogo…
               </div>
             )}
@@ -291,7 +333,7 @@ export function ChatVico() {
               e.preventDefault();
               void enviar(entrada);
             }}
-            className="border-t border-borde bg-superficie px-3 py-2.5"
+            className="border-t border-linea bg-hoja px-3 py-2.5"
           >
             <div className="flex items-center gap-2">
               <input
@@ -302,13 +344,13 @@ export function ChatVico() {
                 placeholder="Ej: cofre Aveo 2012"
                 aria-label="Escribe tu mensaje para Vico"
                 maxLength={2000}
-                className="h-11 flex-1 rounded-md border border-borde bg-fondo px-3 text-base"
+                className="h-11 flex-1 rounded-md border border-linea bg-papel px-3 text-base text-tinta placeholder:text-tinta-suave"
               />
               <button
                 type="submit"
                 disabled={enviando || !entrada.trim()}
                 aria-label="Enviar mensaje"
-                className="flex size-11 items-center justify-center rounded-md bg-ambar text-grafito transition-colors hover:bg-ambar-press hover:text-white disabled:opacity-50"
+                className="flex size-11 shrink-0 items-center justify-center rounded-md bg-ambar text-plano-hondo transition-colors duration-150 hover:bg-ambar-press disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <Send aria-hidden className="size-5" />
               </button>
@@ -319,11 +361,11 @@ export function ChatVico() {
                 href={urlWhatsApp(PRELLENADOS.generico)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-tinta underline-offset-2 hover:underline"
+                className="num-tab font-mono font-semibold text-tinta underline-offset-2 hover:underline"
               >
                 {NEGOCIO.whatsappBonito}
               </a>{" "}
-              · Respondemos en minutos en horario hábil
+              · Ahí te contesta {NEGOCIO.asistente} mismo, 24/7
             </p>
           </form>
         </div>

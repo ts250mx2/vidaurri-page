@@ -1,0 +1,259 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Dirección de diseño "Mostrador": el mostrador de una
+   refaccionaria regia de 40 años llevado a pantalla. Tema claro
+   industrial. Regla de oro: si es ámbar, convierte; si es verde
+   brillante, es WhatsApp; nada más usa esos colores.
+
+   Todo lo "gráfico" del sitio se construye con lo que SÍ es
+   nuestro: la foto real del catálogo, el grafito, la retícula de
+   plano técnico y la Barlow Condensed en grande. Nunca con ámbar
+   decorativo — el ámbar solo se gana cuando hay algo que tocar.
+   ============================================================ */
+
+@theme {
+  /* --- Colores --- */
+  --color-fondo: #f4f5f7; /* gris acero claro, fondo general */
+  --color-fondo-hondo: #e8eaef; /* neutro un paso más hondo: bandas alternas */
+  --color-superficie: #ffffff; /* tarjetas, buscador, tablas */
+  --color-borde: #e3e6ea;
+  --color-borde-fuerte: #ced4dc; /* hairline con peso: separadores y hover */
+  --color-tinta: #171b21; /* grafito: texto principal, header, footer */
+  --color-tinta-suave: #5c6570; /* texto secundario, SKU, metadatos */
+  --color-grafito: #171b21;
+  --color-grafito-claro: #232933; /* superficies sobre grafito */
+  --color-grafito-hondo: #0d1015; /* fondo de las bandas oscuras y del hero */
+  --color-ambar: #ffb400; /* EXCLUSIVO de la acción (cotizar, precios clave) */
+  --color-ambar-press: #d9480f; /* hover/pressed del ámbar y acentos de ahorro */
+  --color-whatsapp: #25d366; /* reservado únicamente a WhatsApp */
+  --color-exito: #1f9d55; /* existencia y confirmaciones */
+
+  /* --- Tipografía (las variables las inyecta next/font en el layout) --- */
+  --font-display: var(--font-barlow), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), Consolas, monospace;
+
+  /* --- Elevación: una sola escala, tres pasos --- */
+  --shadow-carta: 0 1px 2px rgb(13 16 21 / 0.04), 0 2px 8px rgb(13 16 21 / 0.05);
+  --shadow-carta-alta: 0 2px 4px rgb(13 16 21 / 0.05),
+    0 14px 30px rgb(13 16 21 / 0.13);
+  --shadow-flotante: 0 20px 50px rgb(13 16 21 / 0.4);
+}
+
+html {
+  overscroll-behavior: none;
+}
+
+body {
+  overscroll-behavior: none;
+  background: var(--color-fondo);
+  color: var(--color-tinta);
+}
+
+/* Evita zoom accidental por doble tap en elementos interactivos */
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+/* Cifras alineables en tablas y precios */
+.num-tab {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   TIPOGRAFÍA DE SEÑALIZACIÓN
+   ============================================================ */
+
+/* Títulos display: Barlow Condensed en mayúsculas, tono de señalización */
+.titulo-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-wrap: balance;
+}
+
+/* Los tamaños grandes de Barlow Condensed piden tracking negativo: a partir
+   de ~3rem el 0.02em del display abre demasiado las letras. */
+.titulo-cartel {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  /* 0.98 y no menos: en mayúsculas el español acentúa (MÁS, CAPÓ, AÑOS) y con
+     interlineado más cerrado la tilde de un renglón toca el de arriba. */
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+/* Rótulo de sección: la etiqueta chica sobre cada H2, en tono de anaquel. */
+.rotulo {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+/* Placa de señalización: el mismo énfasis del marcador pero sobre grafito,
+   donde un subrayado ámbar bajo texto blanco no daría contraste. La tinta va
+   en grafito, como los letreros de anaquel. Solo para títulos sobre oscuro. */
+.placa-ambar {
+  display: inline-block;
+  background: var(--color-ambar);
+  color: var(--color-grafito);
+  /* La caja de fondo de un inline mide lo que las métricas de la fuente
+     (~1.2em en Barlow), así que sobre un titular con interlineado cerrado se
+     encabalgaba con el renglón de arriba. Como inline-block con line-height
+     controlado, la placa mide exactamente lo que ocupa su texto. */
+  line-height: 1;
+  padding: 0.07em 0.14em 0.09em;
+  vertical-align: baseline;
+  /* La placa nunca se parte: dos medias placas en renglones distintos se leen
+     como un error de maquetación, no como énfasis. */
+  white-space: nowrap;
+}
+
+/* Subrayado grueso ámbar tipo marcador (hero y énfasis puntuales) */
+.marcador-ambar {
+  background: linear-gradient(
+    transparent 68%,
+    var(--color-ambar) 68%,
+    var(--color-ambar) 96%,
+    transparent 96%
+  );
+  padding: 0 0.08em;
+}
+
+/* ============================================================
+   SUPERFICIES
+   ============================================================ */
+
+/* Tarjeta del mostrador: la base común de toda superficie elevada. */
+.carta {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-carta);
+  transition:
+    box-shadow 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+/* Solo para tarjetas que son un enlace: se levantan al pasar el cursor. */
+.carta-enlace:hover {
+  border-color: var(--color-borde-fuerte);
+  box-shadow: var(--shadow-carta-alta);
+  transform: translateY(-2px);
+}
+
+/* Tarjeta sobre banda grafito (franja del asistente, mayoreo). */
+.carta-oscura {
+  background: var(--color-grafito-claro);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 0.75rem;
+}
+
+/* ============================================================
+   TEXTURAS — retícula de plano técnico, en neutros. Nunca ámbar.
+   ============================================================ */
+
+/* Cuadrícula tenue para bandas claras: da profundidad sin meter color. */
+.trama-rejilla {
+  background-image:
+    linear-gradient(to right, rgb(23 27 33 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(23 27 33 / 0.045) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+/* La misma cuadrícula sobre grafito. */
+.trama-rejilla-oscura {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+/* Textura de anaquel para el fondo de las fotos de producto: las fotos del
+   catálogo vienen sobre blanco, así el recorte no se pierde en la tarjeta. */
+.trama-anaquel {
+  background-color: var(--color-superficie);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgb(23 27 33 / 0.07) 1px,
+    transparent 0
+  );
+  background-size: 14px 14px;
+}
+
+/* ============================================================
+   HERO — el muro de piezas reales detrás del buscador
+   ============================================================ */
+
+/* Las fotos del catálogo vienen sobre fondo blanco: sobre grafito quedarían
+   como recuadros brillantes. `luminosity` + gris las funde en una pared de
+   metal, y el velo de abajo garantiza el contraste del texto encima. */
+.mosaico-pieza {
+  filter: grayscale(1) contrast(1.15);
+  mix-blend-mode: luminosity;
+  opacity: 0.45;
+}
+
+/* Velo del hero: sólido del lado del texto, abierto del lado de las piezas. */
+.velo-hero {
+  background:
+    linear-gradient(
+      to right,
+      var(--color-grafito-hondo) 0%,
+      rgb(13 16 21 / 0.94) 42%,
+      rgb(13 16 21 / 0.72) 72%,
+      rgb(13 16 21 / 0.82) 100%
+    ),
+    linear-gradient(to bottom, rgb(13 16 21 / 0.55) 0%, transparent 30%);
+}
+
+/* En móvil el texto ocupa todo el ancho: el velo se cierra parejo. */
+@media (max-width: 767px) {
+  .velo-hero {
+    background: linear-gradient(
+      to bottom,
+      rgb(13 16 21 / 0.9) 0%,
+      rgb(13 16 21 / 0.86) 55%,
+      rgb(13 16 21 / 0.94) 100%
+    );
+  }
+}
+
+/* ============================================================
+   FOCO Y MOVIMIENTO
+   ============================================================ */
+
+/* Foco visible consistente en todo el sitio */
+:focus-visible {
+  outline: 2px solid var(--color-ambar-press);
+  outline-offset: 2px;
+}
+
+/* Sobre grafito el naranja del foco se apaga: ahí manda el ámbar. */
+.sobre-grafito :focus-visible {
+  outline-color: var(--color-ambar);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .carta-enlace:hover {
+    transform: none;
+  }
+}

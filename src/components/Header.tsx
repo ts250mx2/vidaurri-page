@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, Phone, FileText, Truck, MapPin, Clock } from "lucide-react";
@@ -63,8 +63,20 @@ const HORARIO: string | null = NEGOCIO.sucursales[0].horario
   : null;
 
 export function Header() {
+  // El header es FIJO: acompaña todo el scroll, cinta y menú incluidos.
+  // Sobre el hero puede ser de cristal porque debajo hay foto oscura; en cuanto
+  // el visitante baja al catálogo (papel claro) el texto blanco se volvería
+  // ilegible, así que a partir de unos píxeles el fondo se cierra.
+  const [desplazado, setDesplazado] = useState(false);
   const [abierto, setAbierto] = useState(false);
   const ruta = usePathname();
+
+  useEffect(() => {
+    const alDesplazar = () => setDesplazado(window.scrollY > 24);
+    alDesplazar(); // el navegador puede restaurar el scroll al recargar
+    window.addEventListener("scroll", alDesplazar, { passive: true });
+    return () => window.removeEventListener("scroll", alDesplazar);
+  }, []);
 
   const esActivo = (href: string) =>
     ruta === href ||
@@ -72,7 +84,17 @@ export function Header() {
     (href === "/refacciones" && ruta.startsWith("/pieza"));
 
   return (
-    <header className="sobre-plano absolute top-0 inset-x-0 z-50 bg-[#111116]/30 backdrop-blur-md text-white transition-colors duration-200 hover:bg-[#111116]/50 after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:content-[''] after:[background:linear-gradient(90deg,var(--color-oro-hondo),var(--color-oro-claro)_22%,var(--color-ambar)_50%,var(--color-oro-claro)_78%,var(--color-oro-hondo))]">
+    <header
+      className={clsx(
+        "sobre-plano fixed inset-x-0 top-0 z-50 text-white backdrop-blur-md",
+        "transition-colors duration-200",
+        "after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:content-['']",
+        "after:[background:linear-gradient(90deg,var(--color-oro-hondo),var(--color-oro-claro)_22%,var(--color-ambar)_50%,var(--color-oro-claro)_78%,var(--color-oro-hondo))]",
+        desplazado
+          ? "bg-plano-hondo/95 shadow-[0_6px_24px_rgb(10_14_20/0.45)]"
+          : "bg-[#111116]/30 hover:bg-[#111116]/50"
+      )}
+    >
       {/* Cinta utilitaria superior */}
       <div className="hidden border-b border-white/10 bg-black/20 backdrop-blur-xs sm:block">
         <div className="mx-auto flex h-9 max-w-7xl items-center justify-between gap-4 px-4 text-[11.5px] text-white/80">

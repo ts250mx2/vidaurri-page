@@ -559,3 +559,22 @@ textarea {
     transform: none;
   }
 }
+
+/* ============================================================
+   ESPACIO BAJO EL HEADER
+   El header flota (position: absolute) y por eso NO reserva
+   espacio en el flujo: sin esto, la cinta y la navegación se
+   comen el primer renglón de cada página interna. Cinta + nav +
+   filo ≈ 103px desde `sm`; en móvil la cinta no se pinta.
+   El hero de la home NO la usa: ahí la foto sube a propósito por
+   detrás del header y el respiro va en su propio padding.
+   ============================================================ */
+.bajo-header {
+  padding-top: 4.5rem;
+}
+
+@media (min-width: 640px) {
+  .bajo-header {
+    padding-top: 7rem;
+  }
+}

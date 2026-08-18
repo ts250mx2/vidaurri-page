@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import type { ProductoResumen } from "@/lib/catalogo";
-import { rangoAnios } from "@/lib/formato";
+import { rangoAnios, pesos } from "@/lib/formato";
 import { FotoPieza } from "@/components/FotoPieza";
+
+// Ficha de la parrilla de búsqueda. Lleva lo que el cliente necesita para
+// decidir sin abrir la pieza: qué es, para qué carro, su número de parte —así
+// se pide en el mostrador— y el precio con IVA, que es la pregunta real.
 
 export function TarjetaProducto({ p }: { p: ProductoResumen }) {
   const anios = rangoAnios(p.aini, p.afin);
@@ -13,7 +17,7 @@ export function TarjetaProducto({ p }: { p: ProductoResumen }) {
       <Link
         href={`/pieza/${encodeURIComponent(p.codigo)}`}
         className="absolute inset-0 z-10"
-        aria-label={`${p.descripcion} — ver pieza y precio`}
+        aria-label={`${p.descripcion} — ${pesos(p.precioConIva)} con IVA incluido`}
       />
 
       {/* Escenario de exhibición de foto en penumbra */}
@@ -33,32 +37,52 @@ export function TarjetaProducto({ p }: { p: ProductoResumen }) {
       </div>
 
       <div className="flex flex-1 flex-col p-4">
-        {/* Título de la pieza */}
-        <h3 className="line-clamp-1 font-display text-[17px] font-bold tracking-tight text-white group-hover:text-[#f0d97d] transition-colors">
+        <h3 className="line-clamp-2 font-display text-[15px] font-bold leading-snug tracking-tight text-white transition-colors group-hover:text-[#f0d97d]">
           {p.descripcion}
         </h3>
 
-        {/* Estatus e indicadores en verde */}
-        <div className="mt-2.5 flex items-center gap-2 text-[11.5px] font-bold text-emerald-400 uppercase tracking-wide">
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="size-3.5 fill-emerald-400 text-black" />
-            NUEVA
-          </span>
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="size-3.5 fill-emerald-400 text-black" />
-            EN EXISTENCIA
-          </span>
+        {/* Para qué carro es y su número de parte: los dos datos con los que
+            un taller confirma que la pieza es la suya. */}
+        {(p.marca || anios) && (
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-white/60">
+            {p.marca && (
+              <span className="rotulo-tecnico text-white/80">{p.marca}</span>
+            )}
+            {anios && <span className="num-tab font-mono">{anios}</span>}
+          </p>
+        )}
+        <p className="num-tab mt-1 truncate font-mono text-[11.5px] text-white/45">
+          {p.codigo}
+        </p>
+
+        {/* EL PRECIO — la pregunta real de quien busca. Va con su IVA pegado,
+            nunca en letra chica: es la promesa del mostrador. */}
+        <div className="mt-auto pt-3.5">
+          <p className="num-tab font-display text-[1.65rem] font-extrabold leading-none tracking-tight text-white">
+            {pesos(p.precioConIva)}
+          </p>
+          <p className="rotulo-tecnico mt-1 text-[10.5px] leading-none text-white/55">
+            IVA incluido
+          </p>
         </div>
 
-        {/* Botón VER DETALLES en degradado metálico plateado */}
-        <div className="relative z-20 mt-4 pt-1">
-          <button
-            type="button"
-            className="boton-metal-plata flex h-10 w-full items-center justify-center rounded-lg text-[12px] font-extrabold tracking-wider"
-          >
-            VER DETALLES
-          </button>
-        </div>
+        {/* La existencia se afirma SOLO cuando la hay: antes el renglón se
+            pintaba siempre y prometía anaquel en piezas que no lo tienen. */}
+        {p.enExistencia && (
+          <p className="mt-3 flex items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-wide text-emerald-400">
+            <CheckCircle2 aria-hidden className="size-3.5 fill-emerald-400 text-black" />
+            En existencia
+          </p>
+        )}
+
+        {/* Es el rótulo del enlace que cubre la tarjeta, no un control aparte:
+            va como texto para no anidar dos elementos interactivos. */}
+        <span
+          aria-hidden
+          className="boton-metal-plata mt-4 flex h-10 w-full items-center justify-center rounded-lg text-[12px] font-extrabold tracking-wider"
+        >
+          VER DETALLES
+        </span>
       </div>
     </article>
   );

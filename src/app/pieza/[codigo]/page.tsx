@@ -215,7 +215,7 @@ export default async function PaginaPieza({ params }: Props) {
       />
 
       <div className="border-b border-linea bg-hoja">
-        <Migas items={migasVisibles} className="mx-auto max-w-6xl px-4 py-3.5" />
+        <Migas items={migasVisibles} className="bajo-header mx-auto max-w-6xl px-4 pb-3.5" />
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">

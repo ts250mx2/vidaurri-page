@@ -3,9 +3,14 @@ import { conCache, TTL_CATALOGO_MS } from "@/lib/cache";
 import { fotoAldoExiste } from "@/lib/aldo";
 
 // Capa de datos PUBLICA del catalogo de piezas nuevas (bdav). Solo expone lo
-// que un cliente puede ver: descripcion, compatibilidades, precio de venta CON
-// IVA y si hay existencia (booleano). NUNCA exponer precio_cpa (costo),
-// utilidad, minimos/maximos, localizacion en bodega ni datos de clientes.
+// que un cliente puede ver: descripcion, compatibilidades, precio CON IVA y si
+// hay existencia (booleano). NUNCA exponer precio_cpa (costo), utilidad,
+// minimos/maximos, localizacion en bodega ni datos de clientes.
+//
+// EL PRECIO PUBLICO ES `precio_lista` * IVA, no `precio_vta`. Lo fijo el
+// cliente: precio_vta es el precio de mostrador ya con descuento y no es lo
+// que se publica. Mismo criterio en el Vendedor IA (vidaurri-ia/src/lib/
+// vendedor.ts) para que el chat y la pagina nunca coticen distinto.
 
 export const IVA = 1.16;
 const PAGE_SIZE = 24;
@@ -65,7 +70,7 @@ export async function listarMarcasSurtidas(): Promise<
       `SELECT l.id, l.linea, COUNT(*) AS piezas
          FROM articulos a
          JOIN lineas l ON l.id = a.id_linea
-        WHERE a.existencia > 0 AND IFNULL(a.precio_vta, 0) > 0
+        WHERE a.existencia > 0 AND IFNULL(a.precio_lista, 0) > 0
           AND l.linea <> '' AND l.linea NOT LIKE 'Z%'
         GROUP BY l.id, l.linea
        HAVING piezas >= 10
@@ -135,7 +140,7 @@ interface FilaProducto {
 }
 
 function condicionesDe(f: FiltrosCatalogo): { where: string; params: unknown[] } {
-  const condiciones: string[] = ["IFNULL(a.precio_vta, 0) > 0"];
+  const condiciones: string[] = ["IFNULL(a.precio_lista, 0) > 0"];
   const params: unknown[] = [];
 
   const palabras = (f.texto ?? "").trim().split(/\s+/).filter(Boolean).slice(0, 6);
@@ -199,13 +204,13 @@ export async function buscarProductos(
       `SELECT a.codigo, a.descripcion, a.imagen,
               IFNULL(l.linea, '') AS marca, IFNULL(p.parte, '') AS tipoParte,
               NULLIF(a.aini, 0) AS aini, NULLIF(a.afin, 0) AS afin,
-              ROUND(IFNULL(a.precio_vta, 0) * ${IVA}, 2) AS precioConIva,
+              ROUND(IFNULL(a.precio_lista, 0) * ${IVA}, 2) AS precioConIva,
               IFNULL(a.existencia, 0) AS existencia
          FROM articulos a
          LEFT JOIN lineas l ON l.id = a.id_linea
          LEFT JOIN partes p ON p.id = a.id_parte
         WHERE ${where}
-        ORDER BY (a.existencia > 0) DESC, a.precio_vta ASC, a.codigo ASC
+        ORDER BY (a.existencia > 0) DESC, a.precio_lista ASC, a.codigo ASC
         LIMIT ${offset}, ${pageSize}`,
       params
     ),
@@ -246,7 +251,7 @@ export async function productoPorCodigo(codigo: string): Promise<ProductoDetalle
     `SELECT a.id, a.codigo, a.descripcion, a.imagen,
             IFNULL(l.linea, '') AS marca, IFNULL(p.parte, '') AS tipoParte,
             NULLIF(a.aini, 0) AS aini, NULLIF(a.afin, 0) AS afin,
-            ROUND(IFNULL(a.precio_vta, 0) * ${IVA}, 2) AS precioConIva,
+            ROUND(IFNULL(a.precio_lista, 0) * ${IVA}, 2) AS precioConIva,
             IFNULL(a.existencia, 0) AS existencia
        FROM articulos a
        LEFT JOIN lineas l ON l.id = a.id_linea
@@ -290,7 +295,7 @@ export async function productoPorCodigo(codigo: string): Promise<ProductoDetalle
 export async function resumenCatalogo(): Promise<{ piezasNuevas: number; marcas: number }> {
   return conCache("resumenCatalogo", TTL_CATALOGO_MS, async () => {
     const filas = await consultaBdav<{ piezasNuevas: number; marcas: number }>(
-      `SELECT (SELECT COUNT(*) FROM articulos WHERE IFNULL(precio_vta, 0) > 0) AS piezasNuevas,
+      `SELECT (SELECT COUNT(*) FROM articulos WHERE IFNULL(precio_lista, 0) > 0) AS piezasNuevas,
               (SELECT COUNT(*) FROM lineas WHERE linea <> '') AS marcas`
     );
     return filas[0] ?? { piezasNuevas: 0, marcas: 0 };
@@ -322,7 +327,7 @@ export async function muestrasPorTipo(idsParte: number[]): Promise<Map<number, s
       .map(
         () => `(SELECT id_parte AS idParte, codigo, imagen
                   FROM articulos
-                 WHERE id_parte = ? AND existencia > 0 AND IFNULL(precio_vta, 0) > 0
+                 WHERE id_parte = ? AND existencia > 0 AND IFNULL(precio_lista, 0) > 0
                  ORDER BY (imagen IS NOT NULL AND imagen <> '') DESC, existencia DESC
                  LIMIT ${CANDIDATOS_MUESTRA})`
       )
@@ -385,13 +390,13 @@ export async function productosDeVitrina(
         () => `(SELECT a.codigo, a.descripcion, a.imagen, a.id_parte AS idParte,
                        IFNULL(l.linea, '') AS marca, IFNULL(p.parte, '') AS tipoParte,
                        NULLIF(a.aini, 0) AS aini, NULLIF(a.afin, 0) AS afin,
-                       ROUND(IFNULL(a.precio_vta, 0) * ${IVA}, 2) AS precioConIva,
+                       ROUND(IFNULL(a.precio_lista, 0) * ${IVA}, 2) AS precioConIva,
                        IFNULL(a.existencia, 0) AS existencia
                   FROM articulos a
                   LEFT JOIN lineas l ON l.id = a.id_linea
                   LEFT JOIN partes p ON p.id = a.id_parte
                  WHERE a.id_parte = ? AND a.existencia > 0
-                   AND IFNULL(a.precio_vta, 0) > 0
+                   AND IFNULL(a.precio_lista, 0) > 0
                    AND a.imagen IS NOT NULL AND a.imagen <> ''
                    AND IFNULL(l.linea, '') <> ''
                  ORDER BY a.existencia DESC
@@ -450,7 +455,7 @@ export async function relacionadosDeGolpe(det: ProductoDetalle): Promise<Product
     `SELECT a.codigo, a.descripcion, a.imagen,
             IFNULL(l.linea, '') AS marca, IFNULL(p.parte, '') AS tipoParte,
             NULLIF(a.aini, 0) AS aini, NULLIF(a.afin, 0) AS afin,
-            ROUND(IFNULL(a.precio_vta, 0) * ${IVA}, 2) AS precioConIva,
+            ROUND(IFNULL(a.precio_lista, 0) * ${IVA}, 2) AS precioConIva,
             IFNULL(a.existencia, 0) AS existencia
        FROM articulos a
        JOIN lineas l ON l.id = a.id_linea
@@ -458,7 +463,7 @@ export async function relacionadosDeGolpe(det: ProductoDetalle): Promise<Product
       WHERE l.linea = ?
         AND a.codigo <> ?
         AND IFNULL(p.parte, '') <> ?
-        AND IFNULL(a.precio_vta, 0) > 0
+        AND IFNULL(a.precio_lista, 0) > 0
         AND a.existencia > 0
         AND (IFNULL(a.aini, 0) = 0 OR a.aini <= ?)
         AND (IFNULL(a.afin, 0) = 0 OR a.afin >= ?)

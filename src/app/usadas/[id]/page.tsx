@@ -146,7 +146,7 @@ export default async function PaginaPiezaUsada({
             { nombre: "Usadas", href: "/usadas" },
             { nombre: pieza.descripcion },
           ]}
-          className="mx-auto max-w-6xl px-4 py-3.5"
+          className="bajo-header mx-auto max-w-6xl px-4 pb-3.5"
         />
       </div>
 

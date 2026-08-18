@@ -32,7 +32,7 @@ export function EncabezadoPagina({
   return (
     <section className="sobre-plano relative isolate overflow-hidden bg-plano-hondo text-white">
 
-      <div className="relative mx-auto max-w-6xl px-4 py-10 md:py-14">
+      <div className="bajo-header relative mx-auto max-w-6xl px-4 pb-10 md:pb-14">
         {(hayMigas || documento) && (
           <div className="mb-7 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-white/15 pb-4">
             {hayMigas && <Migas items={listaMigas} tono="oscuro" />}

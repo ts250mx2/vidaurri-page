@@ -9,9 +9,9 @@ colors:
   linea-fuerte: "#a9b2bc"
   tinta: "#16181d"
   tinta-suave: "#5b626c"
-  plano: "#1c1c22"
-  plano-hondo: "#111116"
-  plano-claro: "#2a2a33"
+  plano: "#2c3542"
+  plano-hondo: "#1a222c"
+  plano-claro: "#3b4757"
   ambar: "#d4af37"
   ambar-press: "#b8942c"
   oro-claro: "#f0d97d"
@@ -19,16 +19,34 @@ colors:
   anotacion: "#d92d20"
   existencia: "#1f9d55"
   whatsapp: "#25d366"
+  # Paradas del oro troquelado (filo, placa, boton): brillo -> cara -> canto
+  oro-brillo: "#fdf3c8"
+  oro-alto: "#f6e39c"
+  oro-canto: "#a9821f"
+  # Paradas del rojo de anotacion (etiqueta de pieza unica)
+  anotacion-alto: "#f4675c"
+  anotacion-canto: "#a51b11"
+  # Superficies de la vitrina en penumbra
+  vitrina-panel: "#242932"
+  vitrina-cristal: "rgb(50 62 78 / 0.72)"
+  # Paradas de la placa de plata (boton VER DETALLES y BUSCAR MI PIEZA)
+  plata-alto: "#c4cbd5"
+  plata-cara: "#b0b7c0"
+  plata-canto: "#9aa4b2"
+  plata-sombra: "#88929e"
+  # Translucidos de acabado (sombra de texto sobre etiqueta, trama de mesa)
+  anotacion-sombra-texto: "rgb(90 12 6 / 0.5)"
+  trama-mesa: "rgb(15 34 51 / 0.055)"
 typography:
   display:
-    fontFamily: "Archivo Narrow, Arial Narrow, sans-serif"
+    fontFamily: "Montserrat, Arial, sans-serif"
     fontSize: "clamp(2.1rem, 5.5vw, 3.6rem)"
     fontWeight: 700
     lineHeight: 1
     letterSpacing: "-0.012em"
     textTransform: "uppercase"
   headline:
-    fontFamily: "Archivo Narrow, Arial Narrow, sans-serif"
+    fontFamily: "Montserrat, Arial, sans-serif"
     fontSize: "clamp(1.15rem, 2.6vw, 1.5rem)"
     fontWeight: 700
     lineHeight: 1
@@ -46,8 +64,15 @@ typography:
     fontWeight: 400
     lineHeight: 1.625
     letterSpacing: "normal"
+  micro:
+    fontFamily: "Montserrat, Arial, sans-serif"
+    fontSize: "12px"
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "0.045em"
+    textTransform: "uppercase"
   label:
-    fontFamily: "Archivo Narrow, Arial Narrow, sans-serif"
+    fontFamily: "Montserrat, Arial, sans-serif"
     fontSize: "11px"
     fontWeight: 700
     lineHeight: 1
@@ -61,16 +86,20 @@ typography:
     letterSpacing: "-0.025em"
     fontFeature: "tabular-nums"
   precio:
-    fontFamily: "Archivo Narrow, Arial Narrow, sans-serif"
-    fontSize: "1.6rem"
+    fontFamily: "Montserrat, Arial, sans-serif"
+    fontSize: "1.65rem"
     fontWeight: 700
     lineHeight: 1
     letterSpacing: "-0.01em"
     fontFeature: "tabular-nums"
 rounded:
-  sello: "0.25rem"
-  lamina: "0.375rem"
-  panel: "0.5rem"
+  cinta: "0.75rem"
+  barra: "99px"
+  sello: "999px"
+  etiqueta: "0.5rem"
+  campo: "0.5rem"
+  lamina: "0.625rem"
+  panel: "1rem"
   globo: "999px"
 spacing:
   canal: "0.75rem"

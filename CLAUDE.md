@@ -99,6 +99,13 @@ conversación: "Respondemos en minutos en horario hábil" o "El asistente cotiza
   `VitrinaDestacados` (mercancía real con precio en la home),
   `QrWhatsApp` (solo desktop: `hidden md:block` en el padre), `SelectorVehiculo`
   (marca→modelo→año→tipo; navega a `/refacciones/...`), `LogoAV`, `IconWhatsApp`.
+- `src/lib/marca-agua.ts` — `estamparMarca(buffer)` / `sellarRespuesta(res)`:
+  estampa el lockup de la casa (`public/marca-agua.png`) abajo a la derecha de
+  TODA foto de pieza. Cuesta ~10-14 ms; devuelve `null` (y loguea) cuando algo
+  falla, y el llamador sirve el original: una foto sin sello es mejor que una
+  pieza sin foto. **Tiene un gemelo idéntico en `vidaurri-ia/src/lib/`: si
+  cambias uno, cambia el otro**, o el mismo producto sale marcado distinto en
+  WhatsApp que en la web. El PNG se regenera con `scripts/generar-marca-agua.mjs`.
 - API: `/api/foto?codigo=&thumb=1` (fotos nuevas), `/api/usadas/foto?n=`
   (fotos usadas), `/api/chat` (proxy al Vendedor IA), `/api/catalogo/modelos`,
   `/api/catalogo/anios`.
@@ -141,6 +148,14 @@ conversación: "Respondemos en minutos en horario hábil" o "El asistente cotiza
    (facia/defensa, calavera/stop, cofre/capó, salpicadera/aleta).
 5. La Bodega Usado es remota y puede fallar: toda consulta a usadas en páginas
    de nuevas va en try/catch y degrada sin romper la página.
+6. **Ninguna foto de pieza sale sin sello.** Toda ruta que sirva imagen de
+   catálogo pasa por `lib/marca-agua`; las estáticas del carrusel se sellan al
+   generarlas (`scripts/sellar-estaticas.mjs`, originales en `assets/vitrina/`).
+   Sellar obliga a bufferear la imagen, así que esas rutas van con
+   `cache: "no-store"` hacia el origen y `Cache-Control` largo hacia afuera.
+   Dos excepciones a propósito: los **logos de fabricantes** (`public/marcas/`)
+   son marcas ajenas y no se tocan, y las miniaturas de menos de 110 px salen
+   limpias porque ahí el sello es una mancha ilegible que no protege nada.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

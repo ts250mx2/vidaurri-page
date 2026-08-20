@@ -1,3 +1,5 @@
+import { sellarRespuesta } from "@/lib/marca-agua";
+
 // Proxy publico de las fotos REALES de las piezas usadas (galeria de la
 // Bodega Usado en sistema.apvidaurri.com). Sin sesion: web publica.
 //
@@ -6,6 +8,13 @@
 // no solo tarda: en HTTP/1.1 el navegador solo abre ~6 conexiones por origen,
 // asi que una foto colgada deja EN BLANCO al resto de la parrilla. Por eso el
 // contrato de esta ruta es "foto rapida o 404 rapido", nunca esperar.
+//
+// Estas fotos son las que mas se copian —son de la bodega propia, no de un
+// catalogo de proveedor—, asi que salen SELLADAS (`lib/marca-agua`). Sellar
+// obliga a tener la imagen entera en memoria, o sea que se pierde el envio en
+// flujo; lo que NO vuelve es la Data Cache de Next, que era la causa real del
+// bloqueo anterior (buffereaba, se rendia arriba de 2 MB y dejaba la parrilla
+// en blanco). El buffer de aqui es acotado, con reloj propio y cache HTTP larga.
 
 const BASE = "https://sistema.apvidaurri.com/imagenes_piezas";
 // nombre_imagen es un nombre de archivo simple; nunca rutas ni querystrings.
@@ -53,10 +62,6 @@ export async function GET(request: Request) {
   try {
     const res = await fetch(`${BASE}/${encodeURIComponent(nombre)}`, {
       signal: control.signal,
-      // Fuera de la Data Cache de Next: guardar binarios ahi obliga a bufferear
-      // la imagen entera antes de contestar (y se rinde arriba de 2 MB), que es
-      // exactamente la espera que hay que quitar. Aqui va el flujo tal cual y la
-      // cache de verdad es la del navegador y el CDN, via Cache-Control.
       cache: "no-store",
       headers: { Accept: "image/*,*/*;q=0.8" },
       redirect: "follow",
@@ -64,23 +69,21 @@ export async function GET(request: Request) {
     // Cabeceras en mano: se para el reloj para que no corte la descarga.
     clearTimeout(reloj);
 
-    const tipo = res.headers.get("content-type") ?? "";
-    // El servidor de bodega contesta 200 con una pagina de error cuando el
-    // archivo no existe: sin esta guarda el navegador recibiria HTML disfrazado
-    // de foto y pintaria el icono roto en vez de caer al respaldo.
-    if (!res.ok || !res.body || !tipo.startsWith("image/")) {
-      // Se cierra el cuerpo que no vamos a usar: si no, la conexion al remoto
-      // queda abierta ocupando el pool.
+    if (!res.ok) {
       await res.body?.cancel();
       return respuestaTexto("Sin foto", 404, CACHE_SIN_FOTO);
     }
 
-    // Content-Length NO se reenvia: si el remoto comprime, undici descomprime y
-    // el largo declarado dejaria de cuadrar — el navegador se quedaria esperando
-    // bytes que nunca llegan, que es la falla que estamos corrigiendo.
-    return new Response(res.body, {
+    // El servidor de bodega contesta 200 con una pagina de error cuando el
+    // archivo no existe: `sellarRespuesta` devuelve null si lo que llego no es
+    // una imagen, y sin esa guarda el navegador pintaria el icono roto en vez
+    // de caer al respaldo.
+    const foto = await sellarRespuesta(res);
+    if (!foto) return respuestaTexto("Sin foto", 404, CACHE_SIN_FOTO);
+
+    return new Response(new Uint8Array(foto.cuerpo), {
       headers: {
-        "Content-Type": tipo,
+        "Content-Type": foto.tipo,
         "Cache-Control": CACHE_FOTO,
         "X-Content-Type-Options": "nosniff",
       },

@@ -100,10 +100,12 @@ conversación: "Respondemos en minutos en horario hábil" o "El asistente cotiza
   `QrWhatsApp` (solo desktop: `hidden md:block` en el padre), `SelectorVehiculo`
   (marca→modelo→año→tipo; navega a `/refacciones/...`), `LogoAV`, `IconWhatsApp`.
 - `src/lib/marca-agua.ts` — `estamparMarca(buffer)` / `sellarRespuesta(res)`:
-  estampa el lockup de la casa (`public/marca-agua.png`) abajo a la derecha de
-  TODA foto de pieza. Cuesta ~10-14 ms; devuelve `null` (y loguea) cuando algo
-  falla, y el llamador sirve el original: una foto sin sello es mejor que una
-  pieza sin foto. **Tiene un gemelo idéntico en `vidaurri-ia/src/lib/`: si
+  estampa el lockup de la casa (`public/marca-agua.png`) en TODA foto de pieza,
+  en dos capas: un **mosaico** diagonal muy tenue que cubre la foto entera (el
+  que hace inservible la foto robada: recortar no lo quita) y el **sello de
+  esquina** inferior derecha con cuerpo (el que se lee de un vistazo). Cuesta
+  ~11-16 ms; devuelve `null` (y loguea) cuando algo falla, y el llamador sirve
+  el original: una foto sin sello es mejor que una pieza sin foto. **Tiene un gemelo idéntico en `vidaurri-ia/src/lib/`: si
   cambias uno, cambia el otro**, o el mismo producto sale marcado distinto en
   WhatsApp que en la web. El PNG se regenera con `scripts/generar-marca-agua.mjs`.
 - API: `/api/foto?codigo=&thumb=1` (fotos nuevas), `/api/usadas/foto?n=`

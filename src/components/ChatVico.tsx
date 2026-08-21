@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
   MessageSquareText,
   Phone,
   RotateCcw,
@@ -64,6 +66,13 @@ export function ChatVico() {
   const [entrada, setEntrada] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [pill, setPill] = useState(false);
+  /** Foto ampliada: las fotos del mensaje donde se dio clic y cuál se ve.
+   *  La navegación se queda DENTRO del mensaje a propósito: cada respuesta de
+   *  Vico cotiza piezas concretas y mezclar fotos de otras preguntas confunde. */
+  const [ampliada, setAmpliada] = useState<{
+    fotos: Array<{ codigo: string; url: string }>;
+    idx: number;
+  } | null>(null);
   const reiniciarRef = useRef(false);
   const finRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -188,9 +197,31 @@ export function ChatVico() {
     return () => window.removeEventListener(EVENTO_ABRIR_CHAT, alAbrir);
   }, [enviar]);
 
+  // Teclado del visor: Esc cierra, flechas cambian de foto.
+  useEffect(() => {
+    if (!ampliada) return;
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setAmpliada(null);
+        return;
+      }
+      if (ampliada.fotos.length < 2) return;
+      if (e.key === "ArrowRight") {
+        setAmpliada((a) => a && { ...a, idx: (a.idx + 1) % a.fotos.length });
+      } else if (e.key === "ArrowLeft") {
+        setAmpliada(
+          (a) => a && { ...a, idx: (a.idx - 1 + a.fotos.length) % a.fotos.length }
+        );
+      }
+    };
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [ampliada]);
+
   function reiniciar() {
     reiniciarRef.current = true;
     setMensajes([SALUDO]);
+    setAmpliada(null);
   }
 
   return (
@@ -304,15 +335,22 @@ export function ChatVico() {
                   <TextoWhatsApp texto={m.texto} />
                   {m.fotos && m.fotos.length > 0 && (
                     <div className="mt-2 grid grid-cols-3 gap-1.5">
-                      {m.fotos.map((f) => (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
+                      {m.fotos.map((f, j) => (
+                        <button
                           key={f.codigo}
-                          src={f.url}
-                          alt={`Foto de la pieza ${f.codigo}`}
-                          loading="lazy"
-                          className="mesa-dibujo aspect-square w-full rounded-sm border border-linea object-contain"
-                        />
+                          type="button"
+                          onClick={() => setAmpliada({ fotos: m.fotos!, idx: j })}
+                          aria-label={`Ver en grande la foto de la pieza ${f.codigo}`}
+                          className="cursor-zoom-in rounded-sm transition-transform duration-150 hover:scale-[1.04] focus-visible:outline-2 focus-visible:outline-ambar"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={f.url}
+                            alt={`Foto de la pieza ${f.codigo}`}
+                            loading="lazy"
+                            className="mesa-dibujo aspect-square w-full rounded-sm border border-linea object-contain"
+                          />
+                        </button>
                       ))}
                     </div>
                   )}
@@ -368,6 +406,76 @@ export function ChatVico() {
               · Ahí te contesta {NEGOCIO.asistente} mismo, 24/7
             </p>
           </form>
+        </div>
+      )}
+
+      {/* Visor: la foto de la pieza en grande, encima del chat. Clic fuera,
+          la X o Esc regresan al hilo tal como estaba. */}
+      {ampliada && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Foto ampliada de la pieza ${ampliada.fotos[ampliada.idx].codigo}`}
+          onClick={() => setAmpliada(null)}
+          className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-3 bg-black/85 p-4 backdrop-blur-sm"
+        >
+          <button
+            type="button"
+            onClick={() => setAmpliada(null)}
+            aria-label="Cerrar la foto"
+            className="absolute right-3 top-3 flex size-11 items-center justify-center rounded-md text-white/80 transition-colors duration-150 hover:bg-white/10 hover:text-white"
+          >
+            <X aria-hidden className="size-6" />
+          </button>
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={ampliada.fotos[ampliada.idx].url}
+            alt={`Foto de la pieza ${ampliada.fotos[ampliada.idx].codigo}, ampliada`}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[74vh] max-w-[94vw] rounded-md bg-white object-contain shadow-flotante"
+          />
+
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-2"
+          >
+            {ampliada.fotos.length > 1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setAmpliada(
+                    (a) =>
+                      a && { ...a, idx: (a.idx - 1 + a.fotos.length) % a.fotos.length }
+                  )
+                }
+                aria-label="Foto anterior"
+                className="flex size-11 items-center justify-center rounded-md border border-white/25 text-white transition-colors duration-150 hover:bg-white/10"
+              >
+                <ChevronLeft aria-hidden className="size-5" />
+              </button>
+            )}
+            <p className="num-tab rounded-md border border-white/25 px-3.5 py-2 font-mono text-[13px] font-semibold text-white">
+              {ampliada.fotos[ampliada.idx].codigo}
+              {ampliada.fotos.length > 1 && (
+                <span className="ml-2 text-white/60">
+                  {ampliada.idx + 1} / {ampliada.fotos.length}
+                </span>
+              )}
+            </p>
+            {ampliada.fotos.length > 1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setAmpliada((a) => a && { ...a, idx: (a.idx + 1) % a.fotos.length })
+                }
+                aria-label="Foto siguiente"
+                className="flex size-11 items-center justify-center rounded-md border border-white/25 text-white transition-colors duration-150 hover:bg-white/10"
+              >
+                <ChevronRight aria-hidden className="size-5" />
+              </button>
+            )}
+          </div>
         </div>
       )}
     </>

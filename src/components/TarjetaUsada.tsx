@@ -3,9 +3,9 @@ import { Camera } from "lucide-react";
 import type { PiezaUsadaResumen } from "@/lib/usadas";
 import { rangoAnios } from "@/lib/formato";
 import { PRELLENADOS, urlWhatsApp } from "@/config/negocio";
+import { urlFotoUsada } from "@/lib/fotos";
 import { FotoPieza } from "@/components/FotoPieza";
 import { Precio } from "@/components/Precio";
-import { BotonCotizar } from "@/components/BotonCotizar";
 import { IconWhatsApp } from "@/components/IconWhatsApp";
 
 // La misma ficha de partida, pero de la bodega de USADO. Dos cosas la separan
@@ -47,7 +47,7 @@ export function TarjetaUsada({
           primer pintado, así que cuando entra la imagen nada se recorre. */}
       <div className="relative border-b border-linea bg-papel-hondo">
         <FotoPieza
-          src={p.foto ? `/api/usadas/foto?n=${encodeURIComponent(p.foto)}` : null}
+          src={p.foto ? urlFotoUsada(p.foto) : null}
           alt={alt}
           prioritaria={typeof indice === "number" && indice < FOTOS_INMEDIATAS}
           className="aspect-[4/3] w-full"
@@ -69,11 +69,27 @@ export function TarjetaUsada({
       </div>
 
       <div className="flex flex-1 flex-col p-4">
-        <p className="num-tab truncate font-mono text-[15px] font-semibold leading-none tracking-tight text-tinta">
-          {p.codigo}
+        <p className="mb-2 flex items-baseline gap-1.5">
+          <span className="rotulo-tecnico shrink-0 text-[10.5px] leading-none text-tinta-suave">
+            ID Pieza
+          </span>
+          <span className="num-tab font-mono text-[15px] font-semibold leading-none tracking-tight text-tinta">
+            {p.id}
+          </span>
         </p>
 
-        <h3 className="mt-2 line-clamp-2 text-[13.5px] font-semibold leading-snug text-tinta">
+        {p.numeroParte && (
+          <p className="mb-2 flex items-baseline gap-1.5 overflow-hidden">
+            <span className="rotulo-tecnico shrink-0 text-[10.5px] leading-none text-tinta-suave">
+              Num. Parte
+            </span>
+            <span className="num-tab truncate font-mono text-[15px] font-semibold leading-none tracking-tight text-tinta">
+              {p.numeroParte}
+            </span>
+          </p>
+        )}
+
+        <h3 className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-tinta">
           {p.descripcion}
         </h3>
 
@@ -105,12 +121,12 @@ export function TarjetaUsada({
         </div>
 
         <div className="relative z-20 mt-3.5 flex gap-2">
-          <BotonCotizar
-            mensaje={`Me interesa la pieza usada: ${nombre} (código ${p.codigo}). ¿Sigue disponible?`}
-            className="min-w-0 flex-1"
+          <Link
+            href={`/usadas/${p.id}`}
+            className="rotulo-tecnico flex h-11 min-w-0 flex-1 items-center justify-center rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta hover:bg-papel"
           >
-            Apártala
-          </BotonCotizar>
+            Ver detalle
+          </Link>
           <a
             href={urlWhatsApp(PRELLENADOS.usada(nombre, p.codigo))}
             target="_blank"

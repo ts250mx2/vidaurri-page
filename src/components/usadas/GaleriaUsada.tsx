@@ -4,15 +4,14 @@ import { useState } from "react";
 import { Camera } from "lucide-react";
 import clsx from "clsx";
 import { FotoPieza } from "@/components/FotoPieza";
+import { urlFotoUsada } from "@/lib/fotos";
 
 // Galería de la hoja de partida usada: la foto grande y la tira de miniaturas.
 // Las fotos son REALES —la pieza exacta que se entrega—, y eso es la ventaja
 // que ningún competidor puede copiar, así que la banda superior lo dice sin
 // rodeos. Sin fotos, cae al marcador "foto por tomar" de FotoPieza.
 
-function urlFoto(nombre: string): string {
-  return `/api/usadas/foto?n=${encodeURIComponent(nombre)}`;
-}
+const urlFoto = urlFotoUsada;
 
 export function GaleriaUsada({
   fotos,

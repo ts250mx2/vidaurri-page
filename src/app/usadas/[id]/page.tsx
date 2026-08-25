@@ -10,6 +10,7 @@ import {
 } from "@/lib/usadas";
 import { rangoAnios } from "@/lib/formato";
 import { NEGOCIO, PRELLENADOS, urlSitio, urlWhatsApp } from "@/config/negocio";
+import { urlFotoUsada } from "@/lib/fotos";
 import { Precio } from "@/components/Precio";
 import { BotonCotizar } from "@/components/BotonCotizar";
 import { IconWhatsApp } from "@/components/IconWhatsApp";
@@ -56,7 +57,7 @@ export async function generateMetadata({
   const { vehiculo } = nombreCompleto(pieza);
   const anios = rangoAnios(pieza.anioInicio, pieza.anioFin);
   const fotoAbsoluta = pieza.fotos[0]
-    ? `${urlSitio()}/api/usadas/foto?n=${encodeURIComponent(pieza.fotos[0])}`
+    ? `${urlSitio()}${urlFotoUsada(pieza.fotos[0])}`
     : undefined;
 
   return {
@@ -103,6 +104,26 @@ export default async function PaginaPiezaUsada({
   const anios = rangoAnios(pieza.anioInicio, pieza.anioFin);
   const textoWhatsApp = PRELLENADOS.usada(nombre, pieza.codigo);
 
+  // "Detalle de la pieza": solo renglones con dato capturado. La ubicación en
+  // bodega, el código interno y el id NO salen al público a propósito.
+  const filasDetalle = (
+    [
+      ["ID Pieza", String(pieza.id)],
+      ["Categoría", pieza.tipoParte],
+      ["Marca", pieza.marca],
+      ["Modelo", pieza.modelo],
+      ["Años", anios],
+      ["Puertas", pieza.puertas ? String(pieza.puertas) : ""],
+      ["Lado", pieza.lado],
+      ["Posición", pieza.posicion],
+      ["Tipo", pieza.tipoPuerta ?? pieza.tipoLuces],
+      ["Motor", pieza.motor],
+      ["Origen", pieza.origen],
+      ["Núm. parte", pieza.numeroParte],
+      ["Notas", pieza.notas],
+    ] as Array<[string, string | null]>
+  ).filter((fila): fila is [string, string] => Boolean(fila[1]?.trim()));
+
   // El detalle no trae el id de la marca: se resuelve contra el catalogo de
   // marcas (cacheado) para armar el link filtrado; si falla, cae a busqueda
   // por texto. Nunca rompe la ficha.
@@ -119,10 +140,11 @@ export default async function PaginaPiezaUsada({
     "@type": "Product",
     name: nombre,
     sku: pieza.codigo,
+    ...(pieza.numeroParte && { mpn: pieza.numeroParte }),
     description: `${pieza.descripcion} usada${vehiculo ? ` para ${vehiculo}` : ""}${anios ? ` (${anios})` : ""}, con foto real de la pieza exacta.`,
     itemCondition: "https://schema.org/UsedCondition",
     ...(pieza.fotos[0] && {
-      image: `${urlSitio()}/api/usadas/foto?n=${encodeURIComponent(pieza.fotos[0])}`,
+      image: `${urlSitio()}${urlFotoUsada(pieza.fotos[0])}`,
     }),
     ...(pieza.marca && { brand: { "@type": "Brand", name: pieza.marca } }),
     offers: {
@@ -152,7 +174,49 @@ export default async function PaginaPiezaUsada({
 
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-10">
-          <GaleriaUsada fotos={pieza.fotos} descripcion={pieza.descripcion} />
+          {/* Columna de la foto: galería + botones de contacto. Los CTAs viven
+              aquí para que en la columna de datos el precio y el "Detalle de
+              la pieza" queden a primera vista. */}
+          <div>
+            <GaleriaUsada fotos={pieza.fotos} descripcion={pieza.descripcion} />
+
+            <div className="mt-6 flex flex-col gap-2.5">
+              <a
+                href={urlWhatsApp(textoWhatsApp)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rotulo-tecnico flex min-h-12 items-center justify-center gap-2 rounded-md bg-whatsapp px-4 text-sm text-plano-hondo transition-[filter] duration-150 hover:brightness-95 active:brightness-90"
+              >
+                <IconWhatsApp lado={18} />
+                Pedir por WhatsApp
+              </a>
+              <p className="text-center text-xs text-tinta-suave">
+                Vico te cotiza al momento, 24/7, y te mandamos más fotos.
+              </p>
+
+              <BotonCotizar
+                mensaje={`Sobre la pieza usada ${nombre} (código ${pieza.codigo}), mi pregunta es: `}
+                className="mt-1 min-h-12 w-full"
+              >
+                Preguntar por chat
+              </BotonCotizar>
+              <p className="text-center text-xs text-tinta-suave">
+                El asistente cotiza 24/7.
+              </p>
+
+              <a
+                href={`tel:${NEGOCIO.telefono}`}
+                className="rotulo-tecnico mt-1 flex min-h-12 items-center justify-center gap-2 rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta hover:bg-papel"
+              >
+                <Phone aria-hidden className="size-4" />
+                Llamar {NEGOCIO.telefonoBonito}
+              </a>
+            </div>
+
+            <div className="mt-6 hidden md:block">
+              <QrWhatsApp texto={textoWhatsApp} />
+            </div>
+          </div>
 
           <div>
             {/* El título carga solo: la condición de la pieza va abajo, con el
@@ -162,9 +226,16 @@ export default async function PaginaPiezaUsada({
             </h1>
 
             <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="num-tab font-mono text-[15px] font-semibold text-tinta">
-                {pieza.codigo}
-              </span>
+              {pieza.numeroParte && (
+                <span className="flex items-baseline gap-1.5">
+                  <span className="rotulo-tecnico text-[11px] leading-none text-tinta-suave">
+                    Num. Parte
+                  </span>
+                  <span className="num-tab font-mono text-[15px] font-semibold text-tinta">
+                    {pieza.numeroParte}
+                  </span>
+                </span>
+              )}
               <span className="rotulo-tecnico rounded-sm bg-anotacion px-2 py-1 text-[11px] leading-none text-white">
                 Usada
               </span>
@@ -220,42 +291,32 @@ export default async function PaginaPiezaUsada({
               </p>
             </section>
 
-            <div className="mt-6 flex flex-col gap-2.5">
-              <a
-                href={urlWhatsApp(textoWhatsApp)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rotulo-tecnico flex min-h-12 items-center justify-center gap-2 rounded-md bg-whatsapp px-4 text-sm text-plano-hondo transition-[filter] duration-150 hover:brightness-95 active:brightness-90"
-              >
-                <IconWhatsApp lado={18} />
-                Apártala por WhatsApp
-              </a>
-              <p className="text-center text-xs text-tinta-suave">
-                Vico te cotiza al momento, 24/7, y te mandamos más fotos.
-              </p>
+            {filasDetalle.length > 0 && (
+              <section aria-labelledby="detalle-pieza-titulo" className="lamina mt-6">
+                <h2
+                  id="detalle-pieza-titulo"
+                  className="rotulo-tecnico border-b border-linea px-5 py-3.5 text-[13px] text-tinta-suave"
+                >
+                  Detalle de la pieza
+                </h2>
+                <dl className="divide-y divide-linea">
+                  {filasDetalle.map(([etiqueta, valor]) => (
+                    <div
+                      key={etiqueta}
+                      className="flex items-baseline justify-between gap-4 px-5 py-2.5"
+                    >
+                      <dt className="rotulo-tecnico shrink-0 text-[11px] leading-none text-tinta-suave">
+                        {etiqueta}
+                      </dt>
+                      <dd className="text-right text-sm leading-snug text-tinta">
+                        {valor}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
 
-              <BotonCotizar
-                mensaje={`Sobre la pieza usada ${nombre} (código ${pieza.codigo}), mi pregunta es: `}
-                className="mt-1 min-h-12 w-full"
-              >
-                Preguntar por chat
-              </BotonCotizar>
-              <p className="text-center text-xs text-tinta-suave">
-                El asistente cotiza 24/7.
-              </p>
-
-              <a
-                href={`tel:${NEGOCIO.telefono}`}
-                className="rotulo-tecnico mt-1 flex min-h-12 items-center justify-center gap-2 rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta hover:bg-papel"
-              >
-                <Phone aria-hidden className="size-4" />
-                Llamar {NEGOCIO.telefonoBonito}
-              </a>
-            </div>
-
-            <div className="mt-6 hidden md:block">
-              <QrWhatsApp texto={textoWhatsApp} />
-            </div>
           </div>
         </div>
 

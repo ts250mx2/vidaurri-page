@@ -405,7 +405,16 @@ export default async function PaginaCatalogo(props: PropsCatalogo) {
                     anio={f.anio}
                   />
                 </Suspense>
-                <Suspense fallback={null}>
+                {/* El aviso de carga es visible a propósito: la verificación
+                    contra el proveedor tarda unos segundos y sin señal la
+                    franja parece no existir. */}
+                <Suspense
+                  fallback={
+                    <p className="rotulo-tecnico mt-10 animate-pulse text-center text-sm text-tinta-suave md:mt-12">
+                      Buscando piezas de importación sobre pedido…
+                    </p>
+                  }
+                >
                   <SobrePedidoDelCatalogo
                     filtros={{
                       texto: f.texto,
@@ -445,7 +454,13 @@ export default async function PaginaCatalogo(props: PropsCatalogo) {
                     respaldo={<SinResultados termino={termino} />}
                   />
                 </Suspense>
-                <Suspense fallback={null}>
+                <Suspense
+                  fallback={
+                    <p className="rotulo-tecnico mt-10 animate-pulse text-center text-sm text-tinta-suave md:mt-12">
+                      Buscando piezas de importación sobre pedido…
+                    </p>
+                  }
+                >
                   <SobrePedidoDelCatalogo
                     filtros={{
                       texto: f.texto,

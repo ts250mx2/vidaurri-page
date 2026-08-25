@@ -99,12 +99,15 @@ export function Header() {
       <div className="hidden border-b border-white/10 bg-black/20 backdrop-blur-xs sm:block">
         <div className="mx-auto flex h-9 max-w-7xl items-center justify-between gap-4 px-4 text-[11.5px] text-white/80">
           <div className="flex items-center gap-6">
-            <span className="flex items-center gap-1.5">
-              <Clock aria-hidden className="size-3.5 shrink-0 text-ambar" />
-              <span>
-                <strong className="font-semibold text-white">Horario:</strong> Lun-Vie 8:30–18:00, Sáb 8:30–14:00
+            {HORARIO && (
+              <span className="flex items-center gap-1.5">
+                <Clock aria-hidden className="size-3.5 shrink-0 text-ambar" />
+                <span>
+                  <strong className="font-semibold text-white">Horario:</strong>{" "}
+                  {HORARIO}
+                </span>
               </span>
-            </span>
+            )}
             <span className="flex items-center gap-1.5">
               <MapPin aria-hidden className="size-3.5 shrink-0 text-ambar" />
               <span>
@@ -170,13 +173,34 @@ export function Header() {
           <div className="flex items-center gap-2 text-white/90">
             <Phone aria-hidden className="size-4 text-ambar" />
             <div className="flex flex-col text-left leading-tight">
-              <span className="text-[10px] text-white/60">Teléfono:</span>
+              <span className="text-[10px] text-white/60">Teléfonos:</span>
               <a
                 href={`tel:${NEGOCIO.telefono}`}
                 className="num-tab font-mono text-[13px] font-semibold hover:text-white"
               >
                 {NEGOCIO.telefonoBonito}
               </a>
+              {/* Las otras dos líneas, con su prefijo para que se lean como
+                  teléfonos y no como claves. Comparten la lada (81) del número
+                  de arriba. En md el header va justo: entran hasta lg. */}
+              <span className="num-tab hidden font-mono text-[11px] text-white/75 lg:block">
+                {NEGOCIO.telefonosExtra.map((linea, i) => (
+                  <span key={linea.telefono}>
+                    {i > 0 && (
+                      <span aria-hidden className="text-white/50">
+                        {" · "}
+                      </span>
+                    )}
+                    <a
+                      href={`tel:${linea.telefono}`}
+                      aria-label={`Llamar al ${linea.bonito}`}
+                      className="hover:text-white"
+                    >
+                      {linea.bonito.replace(/^\(\d+\)\s*/, "")}
+                    </a>
+                  </span>
+                ))}
+              </span>
             </div>
           </div>
 
@@ -246,13 +270,21 @@ export function Header() {
             )}
           </ul>
 
-          <a
-            href={`tel:${NEGOCIO.telefono}`}
-            className="mt-2 flex min-h-11 items-center gap-2 text-[15px] text-white"
-          >
-            <Phone aria-hidden className="size-4" />
-            <span className="num-tab font-mono">{NEGOCIO.telefonoBonito}</span>
-          </a>
+          <div className="mt-2">
+            {[
+              { telefono: NEGOCIO.telefono, bonito: NEGOCIO.telefonoBonito },
+              ...NEGOCIO.telefonosExtra,
+            ].map((linea) => (
+              <a
+                key={linea.telefono}
+                href={`tel:${linea.telefono}`}
+                className="flex min-h-11 items-center gap-2 text-[15px] text-white"
+              >
+                <Phone aria-hidden className="size-4" />
+                <span className="num-tab font-mono">{linea.bonito}</span>
+              </a>
+            ))}
+          </div>
         </nav>
       )}
     </header>

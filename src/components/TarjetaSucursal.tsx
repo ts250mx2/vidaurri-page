@@ -73,8 +73,8 @@ export function TarjetaSucursal({
           <MapPin aria-hidden className="size-4" />
           Cómo llegar
         </a>
-        {/* Sin línea propia confirmada se ofrece la de la casa, rotulada como
-            tal: nunca la de la matriz disfrazada de teléfono de esta sucursal. */}
+        {/* Sin línea propia confirmada se marca la línea general de la casa
+            (el aria-label sí lo aclara); el rótulo visible es solo "Llamar". */}
         <a
           href={`tel:${sucursal.telefono ?? NEGOCIO.telefono}`}
           aria-label={
@@ -85,7 +85,7 @@ export function TarjetaSucursal({
           className={CLASE_BOTON}
         >
           <Phone aria-hidden className="size-4" />
-          {sucursal.telefono ? "Llamar" : "Llamar a la casa"}
+          Llamar
         </a>
       </div>
     </article>

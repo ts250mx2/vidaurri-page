@@ -128,14 +128,22 @@ export async function Footer() {
                   </span>
                 </li>
               ))}
-              <li className="flex items-center gap-2.5">
-                <Phone aria-hidden className="size-4 shrink-0 text-white/45" />
-                <a
-                  href={`tel:${NEGOCIO.telefono}`}
-                  className="num-tab font-mono text-[13px] text-white underline-offset-4 hover:underline"
-                >
-                  {NEGOCIO.telefonoBonito}
-                </a>
+              <li className="flex items-start gap-2.5">
+                <Phone aria-hidden className="mt-0.5 size-4 shrink-0 text-white/45" />
+                <span className="flex flex-col gap-1.5">
+                  {[
+                    { telefono: NEGOCIO.telefono, bonito: NEGOCIO.telefonoBonito },
+                    ...NEGOCIO.telefonosExtra,
+                  ].map((linea) => (
+                    <a
+                      key={linea.telefono}
+                      href={`tel:${linea.telefono}`}
+                      className="num-tab font-mono text-[13px] text-white underline-offset-4 hover:underline"
+                    >
+                      {linea.bonito}
+                    </a>
+                  ))}
+                </span>
               </li>
               <li className="pt-1">
                 <a

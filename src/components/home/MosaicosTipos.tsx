@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { FotoPieza } from "@/components/FotoPieza";
+import { urlFotoNueva } from "@/lib/fotos";
 
 // Las zonas del golpe: los tipos de pieza que más se chocan, cada uno con una
 // foto de muestra del catálogo real y el sinónimo regional entre paréntesis
@@ -28,7 +29,7 @@ export function MosaicosTipos({ items }: { items: MosaicoTipo[] }) {
             id="tipos-titulo"
             className="rotulo-tecnico text-[clamp(1.15rem,2.6vw,1.5rem)] leading-none text-tinta"
           >
-            ¿Qué se te rompió?
+            Busca por tipo de pieza
           </h2>
           <Link
             href="/refacciones"
@@ -49,7 +50,7 @@ export function MosaicosTipos({ items }: { items: MosaicoTipo[] }) {
               <FotoPieza
                 src={
                   t.codigo
-                    ? `/api/foto?codigo=${encodeURIComponent(t.codigo)}`
+                    ? urlFotoNueva(t.codigo)
                     : null
                 }
                 alt={`${t.etiqueta} del catálogo de Autopartes Vidaurri`}

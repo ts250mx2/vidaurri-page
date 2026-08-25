@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
@@ -18,6 +19,8 @@ import { PanelFiltros } from "@/components/catalogo/PanelFiltros";
 import { Paginacion } from "@/components/catalogo/Paginacion";
 import { PillVehiculo } from "@/components/catalogo/PillVehiculo";
 import { SinResultados } from "@/components/catalogo/SinResultados";
+import { UsadasDelCatalogo } from "@/components/catalogo/UsadasDelCatalogo";
+import { SobrePedidoDelCatalogo } from "@/components/catalogo/SobrePedidoDelCatalogo";
 
 // Catalogo de refacciones NUEVAS con URLs semanticas (contrato del catalogo):
 // /refacciones/[[...seg]] con segmentos opcionales marca/modelo/año/tipo por
@@ -393,9 +396,67 @@ export default async function PaginaCatalogo(props: PropsCatalogo) {
                   rutaBase={f.rutaBase}
                   query={f.query}
                 />
+                <Suspense fallback={null}>
+                  <UsadasDelCatalogo
+                    texto={f.texto}
+                    marca={f.marca?.linea}
+                    modelo={f.modelo?.modelo}
+                    tipoParte={f.tipo?.parte}
+                    anio={f.anio}
+                  />
+                </Suspense>
+                <Suspense fallback={null}>
+                  <SobrePedidoDelCatalogo
+                    filtros={{
+                      texto: f.texto,
+                      idLinea: f.marca?.id,
+                      idModelo: f.modelo?.id,
+                      idParte: f.tipo?.id,
+                      anio: f.anio,
+                    }}
+                  />
+                </Suspense>
               </>
             ) : (
-              <SinResultados termino={termino} />
+              /* En nuevas no hubo: antes de dar el "¿No la encuentras?" se
+                 revisa la Bodega Usado. Si ahí sí hay, se muestran SOLO las
+                 usadas; el cuadro de rescate queda de respaldo para cuando la
+                 Bodega tampoco tiene nada (o no responde). */
+              <>
+                <Suspense
+                  fallback={
+                    <section
+                      aria-label="Buscando en la Bodega de Usado"
+                      className="lamina px-5 py-14 text-center md:py-20"
+                    >
+                      <p className="rotulo-tecnico animate-pulse text-sm text-tinta-suave">
+                        Buscando también en la Bodega de Usado…
+                      </p>
+                    </section>
+                  }
+                >
+                  <UsadasDelCatalogo
+                    texto={f.texto}
+                    marca={f.marca?.linea}
+                    modelo={f.modelo?.modelo}
+                    tipoParte={f.tipo?.parte}
+                    anio={f.anio}
+                    sinNuevas
+                    respaldo={<SinResultados termino={termino} />}
+                  />
+                </Suspense>
+                <Suspense fallback={null}>
+                  <SobrePedidoDelCatalogo
+                    filtros={{
+                      texto: f.texto,
+                      idLinea: f.marca?.id,
+                      idModelo: f.modelo?.id,
+                      idParte: f.tipo?.id,
+                      anio: f.anio,
+                    }}
+                  />
+                </Suspense>
+              </>
             )}
           </div>
         </div>

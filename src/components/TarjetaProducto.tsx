@@ -3,6 +3,7 @@ import { CheckCircle2, Sparkles } from "lucide-react";
 import type { ProductoResumen } from "@/lib/catalogo";
 import { rangoAnios, pesos } from "@/lib/formato";
 import { FotoPieza } from "@/components/FotoPieza";
+import { urlFotoNueva } from "@/lib/fotos";
 
 // Ficha de la parrilla de búsqueda. Lleva lo que el cliente necesita para
 // decidir sin abrir la pieza: qué es, para qué carro, su número de parte —así
@@ -23,7 +24,7 @@ export function TarjetaProducto({ p }: { p: ProductoResumen }) {
       {/* Escenario de exhibición de foto en penumbra */}
       <div className="relative border-b border-white/10 bg-gradient-to-b from-black/60 to-black/30">
         <FotoPieza
-          src={`/api/foto?codigo=${encodeURIComponent(p.foto)}`}
+          src={urlFotoNueva(p.foto)}
           alt={alt}
           className="aspect-[4/3] w-full"
           imgClassName="p-3 transition-transform duration-200 group-hover:scale-105"

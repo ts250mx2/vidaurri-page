@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import {
+  conteoVendiblesPorTipo,
   listarMarcasSurtidas,
   listarTiposParte,
   muestrasPorTipo,
@@ -73,11 +74,16 @@ function sinAcentos(texto: string): string {
 }
 
 /** Resuelve cada objetivo contra los nombres reales de la tabla `partes`:
- *  primero por nombre exacto, si no por PREFIJO (el más corto), y solo al final
- *  por coincidencia suelta. El prefijo importa: buscar "DEFENSA" con `includes`
- *  premiaba a "GUIAS DE DEFENSA" sobre "DEFENSAS DELANTERAS" por ser más corto. */
+ *  candidatos por nombre exacto, luego PREFIJO (el más corto), luego
+ *  coincidencia suelta — y entre ellos GANA el que tiene más artículos
+ *  vendibles. El nombre solo desempata: en la base hay nombres casi repetidos
+ *  ("PUERTAS" con 1 artículo vs "PUERTAS, TAPAS CAJA..." con el surtido real)
+ *  y un mosaico que lleva al nombre bonito pero vacío es un callejón.
+ *  El prefijo importa: buscar "DEFENSA" con `includes` premiaba a "GUIAS DE
+ *  DEFENSA" sobre "DEFENSAS DELANTERAS" por ser más corto. */
 function tiposDestacados(
-  tipos: TipoParte[]
+  tipos: TipoParte[],
+  vendiblesPorTipo: Map<number, number>
 ): Array<{ id: number; etiqueta: string; corto: string }> {
   const usados = new Set<number>();
   const resultado: Array<{ id: number; etiqueta: string; corto: string }> = [];
@@ -95,15 +101,25 @@ function tiposDestacados(
       objetivo.claves.some((clave) => t.norm.includes(clave))
     );
 
+    // Solo exacto y prefijo compiten por surtido: la coincidencia suelta
+    // ("MANIJAS ... DE PUERTA" contiene "PUERTA") es otra pieza, no otra forma
+    // de escribir la misma — queda de último respaldo, como siempre.
+    const porNombre = [
+      ...(exacto ? [exacto] : []),
+      ...(porPrefijo.length > 0 ? [masCorto(porPrefijo)] : []),
+      ...porPrefijo,
+    ];
+    const candidatos = [...new Map(porNombre.map((t) => [t.id, t])).values()];
+
+    const vendibles = (id: number) => vendiblesPorTipo.get(id) ?? 0;
     const elegido =
-      exacto ??
-      (porPrefijo.length > 0
-        ? masCorto(porPrefijo)
+      candidatos.length > 0
+        ? candidatos.reduce((a, b) => (vendibles(b.id) > vendibles(a.id) ? b : a))
         : porContenido.length > 0
           ? masCorto(porContenido)
-          : null);
-
+          : null;
     if (!elegido) continue;
+
     usados.add(elegido.id);
     resultado.push({ id: elegido.id, etiqueta: objetivo.etiqueta, corto: objetivo.corto });
   }
@@ -115,17 +131,24 @@ export default async function PaginaInicio() {
   // `listarMarcasSurtidas` (no `listarMarcas`): la vitrina enseña solo marcas
   // con piezas disponibles, ordenadas por volumen — el catálogo completo trae
   // líneas de camión y marcas sin una sola pieza.
-  const [marcas, tipos, resumen, bodega, usadas] = await Promise.all([
-    listarMarcasSurtidas().catch(() => []),
-    listarTiposParte().catch(() => []),
-    resumenCatalogo().catch(() => null),
-    resumenBodega().catch(() => null),
-    buscarPiezasUsadas({ page: 1, pageSize: 8 })
-      .then((r) => r.piezas)
-      .catch(() => [] as PiezaUsadaResumen[]),
-  ]);
+  const [marcas, tipos, vendiblesPorTipo, resumen, bodega, usadas] =
+    await Promise.all([
+      listarMarcasSurtidas().catch(() => []),
+      listarTiposParte().catch(() => []),
+      conteoVendiblesPorTipo().catch((error) => {
+        // Sin el conteo los mosaicos aún salen, pero pueden apuntar al nombre
+        // sin surtido: se deja rastro.
+        console.error("No se pudo contar vendibles por tipo:", error);
+        return new Map<number, number>();
+      }),
+      resumenCatalogo().catch(() => null),
+      resumenBodega().catch(() => null),
+      buscarPiezasUsadas({ page: 1, pageSize: 8 })
+        .then((r) => r.piezas)
+        .catch(() => [] as PiezaUsadaResumen[]),
+    ]);
 
-  const destacados = tiposDestacados(tipos);
+  const destacados = tiposDestacados(tipos, vendiblesPorTipo);
   const muestras = await muestrasPorTipo(destacados.map((d) => d.id)).catch(
     (error) => {
       // Degrada al respaldo visual, pero deja rastro: un fallo silencioso aquí

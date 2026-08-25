@@ -24,6 +24,8 @@ export interface ParteUsadas {
 export interface PiezaUsadaResumen {
   id: number;
   codigo: string;
+  /** Número de parte del fabricante (null si no está capturado). */
+  numeroParte: string | null;
   descripcion: string;
   marca: string;
   modelo: string;
@@ -38,6 +40,20 @@ export interface PiezaUsadaResumen {
 
 export interface PiezaUsadaDetalle extends PiezaUsadaResumen {
   fotos: string[];
+  /** Ficha técnica pública ("Detalle de la pieza"). Todo campo sin capturar
+   *  llega null y el renglón simplemente no se pinta. */
+  lado: string | null;
+  posicion: string | null;
+  /** ELECTRICA / MANUAL / CASCARON (solo puertas). */
+  tipoPuerta: string | null;
+  /** HALOGENO / LED / LASER (solo luces). */
+  tipoLuces: string | null;
+  puertas: number | null;
+  /** USADO ORIGINAL / USADO TAIWAN... */
+  origen: string | null;
+  motor: string | null;
+  /** Comentarios de condición capturados por la bodega ("con un rayón..."). */
+  notas: string | null;
 }
 
 export async function listarMarcasUsadas(): Promise<MarcaUsadas[]> {
@@ -77,6 +93,7 @@ export interface FiltrosUsadas {
 interface FilaPieza {
   id: number;
   codigo: string;
+  numeroParte: string | null;
   descripcion: string;
   marca: string;
   modelo: string;
@@ -90,6 +107,7 @@ interface FilaPieza {
 
 const CAMPOS_PIEZA = `
   p.id_pieza AS id, p.codigo, p.descripcion,
+  NULLIF(TRIM(p.numeroparte), '') AS numeroParte,
   IFNULL(ma.marca, '') AS marca, IFNULL(mo.modelo, '') AS modelo,
   IFNULL(pa.parte, '') AS tipoParte,
   NULLIF(p.anio_inicio, 0) AS anioInicio, NULLIF(p.anio_fin, 0) AS anioFin,
@@ -110,6 +128,7 @@ function alPublico(fila: FilaPieza): PiezaUsadaResumen {
   return {
     id: fila.id,
     codigo: fila.codigo,
+    numeroParte: fila.numeroParte,
     descripcion: fila.descripcion,
     marca: fila.marca,
     modelo: fila.modelo,
@@ -178,11 +197,33 @@ export async function buscarPiezasUsadas(
   return { total: conteo[0]?.total ?? 0, page, pageSize, piezas: filas.map(alPublico) };
 }
 
+/** Campo de captura libre de la bodega: "" / "." / "N/A" cuentan como vacío. */
+function datoCapturado(valor: unknown): string | null {
+  const texto = String(valor ?? "").trim();
+  if (!texto || texto === "." || texto.toUpperCase() === "N/A") return null;
+  return texto;
+}
+
+interface FilaDetalle extends FilaPieza {
+  lado: string | null;
+  posicion: string | null;
+  tipoPuerta: string | null;
+  tipoLuces: string | null;
+  puertas: number | null;
+  origen: string | null;
+  motor: string | null;
+  notas: string | null;
+}
+
 export async function piezaUsadaPorId(id: number): Promise<PiezaUsadaDetalle | null> {
   if (!Number.isInteger(id) || id <= 0) return null;
 
-  const filas = await consultaUsadas<FilaPieza>(
-    `SELECT ${CAMPOS_PIEZA} ${JOINS_PIEZA}
+  const filas = await consultaUsadas<FilaDetalle>(
+    `SELECT ${CAMPOS_PIEZA},
+            p.lado, p.posicion, p.tipo_puerta AS tipoPuerta,
+            p.tipo_luces AS tipoLuces, p.puertas, p.origen, p.motor,
+            p.comentarios AS notas
+       ${JOINS_PIEZA}
       WHERE p.id_pieza = ? AND p.existencia > 0
       LIMIT 1`,
     [id]
@@ -199,7 +240,18 @@ export async function piezaUsadaPorId(id: number): Promise<PiezaUsadaDetalle | n
     [id]
   );
 
-  return { ...alPublico(pieza), fotos: fotos.map((f) => f.nombre) };
+  return {
+    ...alPublico(pieza),
+    fotos: fotos.map((f) => f.nombre),
+    lado: datoCapturado(pieza.lado),
+    posicion: datoCapturado(pieza.posicion),
+    tipoPuerta: datoCapturado(pieza.tipoPuerta),
+    tipoLuces: datoCapturado(pieza.tipoLuces),
+    puertas: Number(pieza.puertas) > 0 ? Number(pieza.puertas) : null,
+    origen: datoCapturado(pieza.origen),
+    motor: datoCapturado(pieza.motor),
+    notas: datoCapturado(pieza.notas),
+  };
 }
 
 /** Raiz del tipo de parte para cruzar catalogos (bdav usa plural "FAROS", la

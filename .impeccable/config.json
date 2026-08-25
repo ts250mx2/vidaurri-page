@@ -17,6 +17,12 @@
         ],
         "createdAt": "2026-08-17T08:25:17.196Z",
         "reason": "Unica reticula restante: .mesa-dibujo, la superficie de apoyo bajo fotos de producto recortadas sobre blanco (sin ella la pieza flota en el vacio). Es el caso measurement surface que la propia regla exceptua. Las 9 decorativas se eliminaron en esta sesion."
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "10px",
+        "createdAt": "2026-08-25T05:50:51.642Z",
+        "reason": "micro-rotulo del header preexistente a esta sesion; tamano intencional del sistema Mostrador"
       }
     ]
   }

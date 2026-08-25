@@ -87,6 +87,22 @@ export async function listarTiposParte(): Promise<TipoParte[]> {
   );
 }
 
+/** Artículos vendibles (existencia y precio) por tipo de parte, cacheado 1 h.
+ *  Existe porque en `partes` hay nombres casi repetidos ("PUERTAS" con 1
+ *  artículo vs "PUERTAS, TAPAS CAJA..." con el surtido real): quien arma
+ *  vitrinas necesita saber cuál versión del nombre tiene mercancía. */
+export async function conteoVendiblesPorTipo(): Promise<Map<number, number>> {
+  return conCache("vendiblesPorTipo", TTL_CATALOGO_MS, async () => {
+    const filas = await consultaBdav<{ idParte: number; total: number }>(
+      `SELECT id_parte AS idParte, COUNT(*) AS total
+         FROM articulos
+        WHERE existencia > 0 AND IFNULL(precio_lista, 0) > 0
+        GROUP BY id_parte`
+    );
+    return new Map(filas.map((f) => [f.idParte, Number(f.total)]));
+  });
+}
+
 export async function listarModelosDeMarca(idLinea: number): Promise<Modelo[]> {
   if (!Number.isInteger(idLinea) || idLinea <= 0) return [];
   return conCache(`modelos:${idLinea}`, TTL_CATALOGO_MS, () =>
@@ -226,6 +242,34 @@ export async function buscarProductos(
     pageSize,
     productos: filas.map(alPublico),
   };
+}
+
+/** Candidatos "sobre pedido": artículos del catálogo que cruzan con los mismos
+ *  filtros de la búsqueda pero SIN existencia en el mostrador. Son los códigos
+ *  que vale la pena consultarle al proveedor (Aldo) para ofrecerlos sobre
+ *  pedido; los baratos primero porque el precio final lo cotiza el mostrador. */
+export async function candidatosSobrePedido(
+  f: FiltrosCatalogo,
+  limite = 8
+): Promise<ProductoResumen[]> {
+  const tope = Math.min(24, Math.max(1, Math.trunc(limite)));
+  const { where, params } = condicionesDe({ ...f, soloExistencia: false });
+
+  const filas = await consultaBdav<FilaProducto>(
+    `SELECT a.codigo, a.descripcion, a.imagen,
+            IFNULL(l.linea, '') AS marca, IFNULL(p.parte, '') AS tipoParte,
+            NULLIF(a.aini, 0) AS aini, NULLIF(a.afin, 0) AS afin,
+            ROUND(IFNULL(a.precio_lista, 0) * ${IVA}, 2) AS precioConIva,
+            IFNULL(a.existencia, 0) AS existencia
+       FROM articulos a
+       LEFT JOIN lineas l ON l.id = a.id_linea
+       LEFT JOIN partes p ON p.id = a.id_parte
+      WHERE ${where} AND IFNULL(a.existencia, 0) <= 0
+      ORDER BY a.precio_lista ASC, a.codigo ASC
+      LIMIT ${tope}`,
+    params
+  );
+  return filas.map(alPublico);
 }
 
 function alPublico(fila: FilaProducto): ProductoResumen {

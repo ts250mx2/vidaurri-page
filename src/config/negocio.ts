@@ -23,25 +23,32 @@ export const NEGOCIO = {
   telefono: "+52 81 8354 2999",
   telefonoBonito: "(81) 8354 2999",
 
+  /** Líneas adicionales de contacto (confirmadas por el cliente). Se listan
+   *  junto al teléfono general donde hay lugar para varias (footer); los CTA
+   *  de "Llamar" de página siguen usando `telefono`. */
+  telefonosExtra: [
+    { telefono: "+52 81 8354 3496", bonito: "(81) 8354 3496" },
+    { telefono: "+52 81 8354 3333", bonito: "(81) 8354 3333" },
+  ],
+
   // Direcciones tomadas de fuentes públicas.
   // `telefono` por sucursal: se omite a propósito mientras no esté confirmado.
   // Publicar el número de la matriz en las dos sucursales manda a quien llama a
   // Fierro con la matriz, y eso quema una venta.
-  // `horario`: PENDIENTE. Mientras no lo confirme el cliente NO se publica —
-  // un cliente que llega el sábado y encuentra cerrado no vuelve.
+  // `horario`: confirmado por el cliente (ago 2026), el mismo en ambas.
   sucursales: [
     {
       nombre: "Matriz",
       direccion: "Jesús M. Garza 2616, Col. Pablo A. de la Garza, 64550 Monterrey, N.L.",
       telefono: undefined as string | undefined,
-      horario: undefined as string | undefined,
+      horario: "Lunes a viernes 9:00–18:00 · Sábado 9:00–15:00" as string | undefined,
       mapsUrl: "https://maps.google.com/?q=Autopartes+Vidaurri+Jesus+M+Garza+2616+Monterrey",
     },
     {
       nombre: "Sucursal Fierro",
       direccion: "Antonio I. Villarreal 1421, Col. Fierro, Monterrey, N.L.",
       telefono: undefined as string | undefined,
-      horario: undefined as string | undefined,
+      horario: "Lunes a viernes 9:00–18:00 · Sábado 9:00–15:00" as string | undefined,
       mapsUrl: "https://maps.google.com/?q=Autopartes+Vidaurri+Antonio+I+Villarreal+1421+Monterrey",
     },
   ],
@@ -65,6 +72,8 @@ export const PRELLENADOS = {
     `Hola, vi la pieza usada ${nombre} (código ${codigo}) en su página. ¿Sigue disponible? ¿Me mandan más fotos?`,
   sinResultados: (termino: string) =>
     `Hola, busqué "${termino}" en su página y no aparece. ¿La pueden conseguir?`,
+  sobrePedido: (nombre: string, codigo: string) =>
+    `Hola, vi la pieza de importación ${nombre} (código ${codigo}) sobre pedido en su página. ¿Me la cotizan con tiempo de entrega?`,
   mayoreo: "Hola, tengo un taller/refaccionaria y quiero cotización de mayoreo.",
 } as const;
 

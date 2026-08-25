@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Camera } from "lucide-react";
 import type { PiezaUsadaResumen } from "@/lib/usadas";
-import { rangoAnios } from "@/lib/formato";
+import { fechaCorta, rangoAnios } from "@/lib/formato";
 import { PRELLENADOS, urlWhatsApp } from "@/config/negocio";
 import { urlFotoUsada } from "@/lib/fotos";
 import { FotoPieza } from "@/components/FotoPieza";
@@ -29,6 +29,7 @@ export function TarjetaUsada({
   indice?: number;
 }) {
   const anios = rangoAnios(p.anioInicio, p.anioFin);
+  const fechaAlta = fechaCorta(p.fechaAlta);
   const vehiculo = [p.marca, p.modelo].filter(Boolean).join(" ");
   const nombre = `${p.descripcion}${vehiculo ? ` ${vehiculo}` : ""}`;
   const alt = `Foto real de la pieza usada: ${[p.descripcion, vehiculo, anios]
@@ -68,54 +69,63 @@ export function TarjetaUsada({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <p className="mb-2 flex items-baseline gap-1.5">
-          <span className="rotulo-tecnico shrink-0 text-[10.5px] leading-none text-tinta-suave">
-            ID Pieza
-          </span>
-          <span className="num-tab font-mono text-[15px] font-semibold leading-none tracking-tight text-tinta">
+      {/* El cuerpo sigue el orden de la tarjeta del sistema de la bodega, que
+          es como el mostrador ya lee sus piezas: ID y fecha de alta, la
+          descripción completa tal cual está capturada, años, pines, precio y
+          origen. La ubicación en bodega se queda fuera a propósito. */}
+      <div className="flex flex-1 flex-col p-4 text-[13px] leading-snug text-tinta">
+        <p className="flex items-baseline justify-between gap-3">
+          <span className="num-tab font-mono text-[14px] font-semibold tracking-tight">
+            <span className="text-tinta-suave">ID pieza: </span>
             {p.id}
           </span>
+          {fechaAlta && (
+            <span className="num-tab shrink-0 font-mono text-[11px] text-tinta-suave">
+              ({fechaAlta})
+            </span>
+          )}
         </p>
 
-        {p.numeroParte && (
-          <p className="mb-2 flex items-baseline gap-1.5 overflow-hidden">
-            <span className="rotulo-tecnico shrink-0 text-[10.5px] leading-none text-tinta-suave">
-              Num. Parte
-            </span>
-            <span className="num-tab truncate font-mono text-[15px] font-semibold leading-none tracking-tight text-tinta">
-              {p.numeroParte}
-            </span>
-          </p>
-        )}
-
-        <h3 className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-tinta">
+        <h3 className="mt-2 line-clamp-3 text-[13.5px] font-semibold leading-snug">
           {p.descripcion}
         </h3>
 
-        {(vehiculo || anios) && (
-          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-tinta-suave">
-            {vehiculo && (
-              <span className="rotulo-tecnico leading-none">{vehiculo}</span>
-            )}
-            {anios && <span className="num-tab font-mono leading-none">{anios}</span>}
+        {anios && (
+          <p className="num-tab mt-1 font-mono text-[13px]">{anios}</p>
+        )}
+
+        {p.numeroParte && (
+          <p className="mt-1 truncate">
+            <span className="text-tinta-suave">Núm. parte: </span>
+            <span className="num-tab font-mono">{p.numeroParte}</span>
           </p>
         )}
 
-        {p.foto && (
-          <p className="mt-2 text-[11px] leading-snug text-tinta-suave">
-            Foto de la pieza exacta que te llevas
+        {p.pines && (
+          <p className="mt-1">
+            <span className="text-tinta-suave">Pines: </span>
+            <span className="num-tab font-mono">{p.pines}</span>
           </p>
         )}
 
-        {/* Línea guía al renglón de precio. */}
-        <div className="mt-auto flex flex-col items-start gap-2 border-t border-linea pt-3.5">
-          <span className="sello sello-unica">Pieza única</span>
+        <div className="mt-3 flex flex-col items-start gap-1.5">
           {p.precioConIva ? (
             <Precio monto={p.precioConIva} />
           ) : (
-            <span className="rotulo-tecnico text-lg leading-none text-tinta">
-              Pregunta el precio
+            <span className="rotulo-tecnico text-lg leading-none">Pregunta el precio</span>
+          )}
+          {p.origen && (
+            <span className="rotulo-tecnico text-[12px] leading-none text-tinta">
+              {p.origen}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-auto flex items-center gap-2 border-t border-linea pt-3">
+          <span className="sello sello-unica">Pieza única</span>
+          {p.foto && (
+            <span className="text-[11px] leading-snug text-tinta-suave">
+              Foto de la pieza exacta
             </span>
           )}
         </div>

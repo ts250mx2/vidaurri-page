@@ -117,6 +117,7 @@ export default async function PaginaPiezaUsada({
       ["Lado", pieza.lado],
       ["Posición", pieza.posicion],
       ["Tipo", pieza.tipoPuerta ?? pieza.tipoLuces],
+      ["Pines", pieza.pines ? String(pieza.pines) : ""],
       ["Motor", pieza.motor],
       ["Origen", pieza.origen],
       ["Núm. parte", pieza.numeroParte],

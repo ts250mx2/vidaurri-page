@@ -27,6 +27,12 @@ export interface PiezaUsadaResumen {
   /** Número de parte del fabricante (null si no está capturado). */
   numeroParte: string | null;
   descripcion: string;
+  /** Fecha de alta en la bodega (YYYY-MM-DD) o null si no está capturada. */
+  fechaAlta: string | null;
+  /** Pines del conector (solo aplica a algunas piezas eléctricas). */
+  pines: number | null;
+  /** USADO ORIGINAL / USADO TAIWAN... */
+  origen: string | null;
   marca: string;
   modelo: string;
   tipoParte: string;
@@ -49,8 +55,6 @@ export interface PiezaUsadaDetalle extends PiezaUsadaResumen {
   /** HALOGENO / LED / LASER (solo luces). */
   tipoLuces: string | null;
   puertas: number | null;
-  /** USADO ORIGINAL / USADO TAIWAN... */
-  origen: string | null;
   motor: string | null;
   /** Comentarios de condición capturados por la bodega ("con un rayón..."). */
   notas: string | null;
@@ -95,6 +99,9 @@ interface FilaPieza {
   codigo: string;
   numeroParte: string | null;
   descripcion: string;
+  fechaAlta: string | null;
+  pines: number | null;
+  origen: string | null;
   marca: string;
   modelo: string;
   tipoParte: string;
@@ -108,6 +115,9 @@ interface FilaPieza {
 const CAMPOS_PIEZA = `
   p.id_pieza AS id, p.codigo, p.descripcion,
   NULLIF(TRIM(p.numeroparte), '') AS numeroParte,
+  NULLIF(p.fecha_alta, '0000-00-00') AS fechaAlta,
+  NULLIF(p.pines, 0) AS pines,
+  NULLIF(TRIM(p.origen), '') AS origen,
   IFNULL(ma.marca, '') AS marca, IFNULL(mo.modelo, '') AS modelo,
   IFNULL(pa.parte, '') AS tipoParte,
   NULLIF(p.anio_inicio, 0) AS anioInicio, NULLIF(p.anio_fin, 0) AS anioFin,
@@ -130,6 +140,9 @@ function alPublico(fila: FilaPieza): PiezaUsadaResumen {
     codigo: fila.codigo,
     numeroParte: fila.numeroParte,
     descripcion: fila.descripcion,
+    fechaAlta: fila.fechaAlta,
+    pines: fila.pines ? Number(fila.pines) : null,
+    origen: fila.origen,
     marca: fila.marca,
     modelo: fila.modelo,
     tipoParte: fila.tipoParte,
@@ -210,7 +223,6 @@ interface FilaDetalle extends FilaPieza {
   tipoPuerta: string | null;
   tipoLuces: string | null;
   puertas: number | null;
-  origen: string | null;
   motor: string | null;
   notas: string | null;
 }
@@ -221,7 +233,7 @@ export async function piezaUsadaPorId(id: number): Promise<PiezaUsadaDetalle | n
   const filas = await consultaUsadas<FilaDetalle>(
     `SELECT ${CAMPOS_PIEZA},
             p.lado, p.posicion, p.tipo_puerta AS tipoPuerta,
-            p.tipo_luces AS tipoLuces, p.puertas, p.origen, p.motor,
+            p.tipo_luces AS tipoLuces, p.puertas, p.motor,
             p.comentarios AS notas
        ${JOINS_PIEZA}
       WHERE p.id_pieza = ? AND p.existencia > 0
@@ -248,7 +260,6 @@ export async function piezaUsadaPorId(id: number): Promise<PiezaUsadaDetalle | n
     tipoPuerta: datoCapturado(pieza.tipoPuerta),
     tipoLuces: datoCapturado(pieza.tipoLuces),
     puertas: Number(pieza.puertas) > 0 ? Number(pieza.puertas) : null,
-    origen: datoCapturado(pieza.origen),
     motor: datoCapturado(pieza.motor),
     notas: datoCapturado(pieza.notas),
   };

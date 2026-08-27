@@ -31,6 +31,17 @@ export function TarjetaUsada({
   const anios = rangoAnios(p.anioInicio, p.anioFin);
   const fechaAlta = fechaCorta(p.fechaAlta);
   const vehiculo = [p.marca, p.modelo].filter(Boolean).join(" ");
+  const detalle = (
+    [
+      ["Categoría", p.tipoParte],
+      ["Lado", p.lado],
+      ["Posición", p.posicion],
+      ["Tipo", p.tipoPuerta ?? p.tipoLuces],
+      ["Puertas", p.puertas ? String(p.puertas) : ""],
+      ["Motor", p.motor],
+      ["Notas", p.notas],
+    ] as Array<[string, string | null]>
+  ).filter((fila): fila is [string, string] => Boolean(fila[1]?.trim()));
   const nombre = `${p.descripcion}${vehiculo ? ` ${vehiculo}` : ""}`;
   const alt = `Foto real de la pieza usada: ${[p.descripcion, vehiculo, anios]
     .filter(Boolean)
@@ -108,6 +119,20 @@ export function TarjetaUsada({
           </p>
         )}
 
+        {/* El mismo "Detalle de la pieza" de la ficha, compacto: solo los
+            renglones con dato, para que la tarjeta cuente lo mismo que el
+            mostrador sin abrir la ficha. */}
+        {detalle.length > 0 && (
+          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 border-t border-linea pt-2.5 text-[12px]">
+            {detalle.map(([etiqueta, valor]) => (
+              <div key={etiqueta} className="contents">
+                <dt className="text-tinta-suave">{etiqueta}</dt>
+                <dd className="min-w-0 truncate text-tinta">{valor}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
         <div className="mt-3 flex flex-col items-start gap-1.5">
           {p.precioConIva ? (
             <Precio monto={p.precioConIva} />
@@ -133,7 +158,7 @@ export function TarjetaUsada({
         <div className="relative z-20 mt-3.5 flex gap-2">
           <Link
             href={`/usadas/${p.id}`}
-            className="rotulo-tecnico flex h-11 min-w-0 flex-1 items-center justify-center rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta hover:bg-papel"
+            className="rotulo-tecnico flex h-11 min-w-0 flex-1 items-center justify-center rounded-md bg-plano-hondo px-4 text-sm text-white transition-colors duration-150 hover:bg-plano"
           >
             Ver detalle
           </Link>

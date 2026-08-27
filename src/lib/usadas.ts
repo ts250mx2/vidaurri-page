@@ -42,12 +42,9 @@ export interface PiezaUsadaResumen {
   /** nombre_imagen de la primera foto activa (null si no tiene). */
   foto: string | null;
   numFotos: number;
-}
-
-export interface PiezaUsadaDetalle extends PiezaUsadaResumen {
-  fotos: string[];
-  /** Ficha técnica pública ("Detalle de la pieza"). Todo campo sin capturar
-   *  llega null y el renglón simplemente no se pinta. */
+  /** Ficha técnica pública ("Detalle de la pieza"). Viaja en el resumen porque
+   *  las tarjetas de la home, la búsqueda y el listado la muestran. Todo campo
+   *  sin capturar llega null y el renglón simplemente no se pinta. */
   lado: string | null;
   posicion: string | null;
   /** ELECTRICA / MANUAL / CASCARON (solo puertas). */
@@ -58,6 +55,10 @@ export interface PiezaUsadaDetalle extends PiezaUsadaResumen {
   motor: string | null;
   /** Comentarios de condición capturados por la bodega ("con un rayón..."). */
   notas: string | null;
+}
+
+export interface PiezaUsadaDetalle extends PiezaUsadaResumen {
+  fotos: string[];
 }
 
 export async function listarMarcasUsadas(): Promise<MarcaUsadas[]> {
@@ -110,6 +111,13 @@ interface FilaPieza {
   precioSinIva: number;
   foto: string | null;
   numFotos: number;
+  lado: string | null;
+  posicion: string | null;
+  tipoPuerta: string | null;
+  tipoLuces: string | null;
+  puertas: number | null;
+  motor: string | null;
+  notas: string | null;
 }
 
 const CAMPOS_PIEZA = `
@@ -122,6 +130,8 @@ const CAMPOS_PIEZA = `
   IFNULL(pa.parte, '') AS tipoParte,
   NULLIF(p.anio_inicio, 0) AS anioInicio, NULLIF(p.anio_fin, 0) AS anioFin,
   IFNULL(p.precio, 0) AS precioSinIva,
+  p.lado, p.posicion, p.tipo_puerta AS tipoPuerta, p.tipo_luces AS tipoLuces,
+  p.puertas, p.motor, p.comentarios AS notas,
   (SELECT pi.nombre_imagen FROM piezas_imagenes pi
     WHERE pi.id_pieza = p.id_pieza AND pi.activo = 1 AND pi.consecutivo >= 1
     ORDER BY pi.consecutivo LIMIT 1) AS foto,
@@ -133,6 +143,13 @@ const JOINS_PIEZA = `
   LEFT JOIN partes pa ON pa.id_parte = p.id_parte
   LEFT JOIN modelos mo ON mo.id_modelo = p.id_modelo
   LEFT JOIN marcas ma ON ma.id_marca = mo.id_marca`;
+
+/** Campo de captura libre de la bodega: "" / "." / "N/A" cuentan como vacío. */
+function datoCapturado(valor: unknown): string | null {
+  const texto = String(valor ?? "").trim();
+  if (!texto || texto === "." || texto.toUpperCase() === "N/A") return null;
+  return texto;
+}
 
 function alPublico(fila: FilaPieza): PiezaUsadaResumen {
   return {
@@ -152,6 +169,13 @@ function alPublico(fila: FilaPieza): PiezaUsadaResumen {
       fila.precioSinIva > 0 ? Math.round(fila.precioSinIva * IVA * 100) / 100 : null,
     foto: fila.foto,
     numFotos: fila.numFotos,
+    lado: datoCapturado(fila.lado),
+    posicion: datoCapturado(fila.posicion),
+    tipoPuerta: datoCapturado(fila.tipoPuerta),
+    tipoLuces: datoCapturado(fila.tipoLuces),
+    puertas: Number(fila.puertas) > 0 ? Number(fila.puertas) : null,
+    motor: datoCapturado(fila.motor),
+    notas: datoCapturado(fila.notas),
   };
 }
 
@@ -210,32 +234,11 @@ export async function buscarPiezasUsadas(
   return { total: conteo[0]?.total ?? 0, page, pageSize, piezas: filas.map(alPublico) };
 }
 
-/** Campo de captura libre de la bodega: "" / "." / "N/A" cuentan como vacío. */
-function datoCapturado(valor: unknown): string | null {
-  const texto = String(valor ?? "").trim();
-  if (!texto || texto === "." || texto.toUpperCase() === "N/A") return null;
-  return texto;
-}
-
-interface FilaDetalle extends FilaPieza {
-  lado: string | null;
-  posicion: string | null;
-  tipoPuerta: string | null;
-  tipoLuces: string | null;
-  puertas: number | null;
-  motor: string | null;
-  notas: string | null;
-}
-
 export async function piezaUsadaPorId(id: number): Promise<PiezaUsadaDetalle | null> {
   if (!Number.isInteger(id) || id <= 0) return null;
 
-  const filas = await consultaUsadas<FilaDetalle>(
-    `SELECT ${CAMPOS_PIEZA},
-            p.lado, p.posicion, p.tipo_puerta AS tipoPuerta,
-            p.tipo_luces AS tipoLuces, p.puertas, p.motor,
-            p.comentarios AS notas
-       ${JOINS_PIEZA}
+  const filas = await consultaUsadas<FilaPieza>(
+    `SELECT ${CAMPOS_PIEZA} ${JOINS_PIEZA}
       WHERE p.id_pieza = ? AND p.existencia > 0
       LIMIT 1`,
     [id]
@@ -252,17 +255,7 @@ export async function piezaUsadaPorId(id: number): Promise<PiezaUsadaDetalle | n
     [id]
   );
 
-  return {
-    ...alPublico(pieza),
-    fotos: fotos.map((f) => f.nombre),
-    lado: datoCapturado(pieza.lado),
-    posicion: datoCapturado(pieza.posicion),
-    tipoPuerta: datoCapturado(pieza.tipoPuerta),
-    tipoLuces: datoCapturado(pieza.tipoLuces),
-    puertas: Number(pieza.puertas) > 0 ? Number(pieza.puertas) : null,
-    motor: datoCapturado(pieza.motor),
-    notas: datoCapturado(pieza.notas),
-  };
+  return { ...alPublico(pieza), fotos: fotos.map((f) => f.nombre) };
 }
 
 /** Raiz del tipo de parte para cruzar catalogos (bdav usa plural "FAROS", la

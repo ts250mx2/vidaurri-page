@@ -23,6 +23,12 @@
         "value": "10px",
         "createdAt": "2026-08-25T05:50:51.642Z",
         "reason": "micro-rotulo del header preexistente a esta sesion; tamano intencional del sistema Mostrador"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#000000",
+        "createdAt": "2026-09-03T07:16:42.940Z",
+        "reason": "negro puro intencional en QR y codigo de barras: lectura por camara y lector del POS; no es color de interfaz"
       }
     ]
   }

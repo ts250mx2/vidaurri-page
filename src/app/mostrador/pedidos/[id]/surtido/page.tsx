@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, FileDown } from "lucide-react";
 import clsx from "clsx";
-import { NEGOCIO } from "@/config/negocio";
+import { MarcaAV } from "@/components/LogoAV";
+import { NEGOCIO, urlSitio } from "@/config/negocio";
+import { svgCodigo128 } from "@/lib/mostrador/codigo128";
 import { hojaSurtido } from "@/lib/mostrador/datos";
+import { svgQr } from "@/lib/mostrador/qr";
 import { ETIQUETA_ORIGEN, fechaHora, telefonoLegible } from "@/lib/mostrador/etiquetas";
 import { idDeRuta } from "@/lib/mostrador/reenvio";
 import { ETIQUETA_ESTATUS } from "@/lib/mostrador/reglas";
@@ -16,6 +19,8 @@ import { BotonImprimir } from "./BotonImprimir";
 // a propósito (aquí se surte, no se cobra) y con la existencia releída por IA
 // al momento de generarla, no la de la captura. Al imprimir desaparecen la
 // barra del mostrador y los botones (`solo-pantalla`); lo demás es papel.
+// La cabecera lleva el folio como código de barras (lo lee el lector del POS)
+// y un QR con la liga al pedido (lo abre el almacenista desde el celular).
 
 export const metadata: Metadata = {
   title: "Hoja de surtido · Mostrador",
@@ -50,19 +55,83 @@ function referencia(renglon: RenglonSurtido): string {
   return "—";
 }
 
-function Encabezado({ hoja }: { hoja: HojaSurtido }) {
+/** Alto de las barras del folio en px; el ancho lo dicta el propio código. */
+const ALTO_BARRAS = 48;
+/** Lado del QR en px: legible en papel carta sin comerse la cabecera. */
+const LADO_QR = 110;
+
+interface Identificadores {
+  /** SVG del código de barras del folio; null en borradores o si falló. */
+  barras: string | null;
+  /** SVG del QR con la liga absoluta al pedido; null si falló. */
+  qr: string | null;
+  urlPedido: string;
+}
+
+async function armarIdentificadores(pedido: HojaSurtido["pedido"]): Promise<Identificadores> {
+  const urlPedido = `${urlSitio()}${RUTA_MOSTRADOR}/pedidos/${pedido.id}`;
+  // Un borrador no tiene folio: no hay nada que leer con el lector.
+  let barras: string | null = null;
+  if (pedido.folio) {
+    try {
+      barras = svgCodigo128(pedido.folio, { alto: ALTO_BARRAS, modulo: 2, conTexto: true });
+    } catch (error) {
+      console.error("[mostrador] no se pudo dibujar el código de barras del folio", pedido.folio, error);
+    }
+  }
+  let qr: string | null = null;
+  try {
+    qr = await svgQr(urlPedido, { ancho: LADO_QR });
+  } catch (error) {
+    console.error("[mostrador] no se pudo dibujar el QR del pedido", pedido.id, error);
+  }
+  return { barras, qr, urlPedido };
+}
+
+async function Encabezado({ hoja }: { hoja: HojaSurtido }) {
   const { pedido } = hoja;
+  const folio = pedido.folio ?? `Borrador #${pedido.id}`;
+  const { barras, qr, urlPedido } = await armarIdentificadores(pedido);
+
+  // Los SVG entran con dangerouslySetInnerHTML SOLO porque el markup lo genera
+  // este mismo servidor (codigo128.ts y qrcode) a partir del folio y de una
+  // URL que armamos nosotros: no hay ni un byte del usuario ahí dentro.
   return (
     <header className="border-b-2 border-tinta pb-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="rotulo-tecnico text-xs text-tinta-suave">{NEGOCIO.nombre}</p>
-          <h1 className="titulo-lamina mt-1 text-3xl">Hoja de surtido</h1>
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div className="min-w-0">
+          <MarcaAV lado={44} className="text-tinta" />
+          <p className="rotulo-tecnico mt-3 text-xs text-tinta-suave">{NEGOCIO.nombre} · Hoja de pedido</p>
+          <h1 className="titulo-lamina num-tab mt-1 text-4xl sm:text-5xl">{folio}</h1>
+          <p className="mt-1.5 text-sm text-tinta-suave">
+            <span className="num-tab font-mono">{fechaHora(pedido.enviadoEn ?? pedido.creadoEn) || "—"}</span>
+            <span className="mx-2" aria-hidden>·</span>
+            {ETIQUETA_ESTATUS[pedido.estatus]}
+          </p>
         </div>
-        <div className="text-right">
-          <p className="rotulo-tecnico text-[11px] text-tinta-suave">Folio</p>
-          <p className="titulo-lamina num-tab text-3xl">{pedido.folio ?? `#${pedido.id}`}</p>
-          <p className="mt-1 text-xs text-tinta-suave">{ETIQUETA_ESTATUS[pedido.estatus]}</p>
+
+        <div className="flex flex-wrap items-start justify-end gap-x-6 gap-y-3">
+          {barras && (
+            <div
+              className="max-w-full overflow-hidden"
+              style={{ height: ALTO_BARRAS + 18 }}
+              dangerouslySetInnerHTML={{ __html: barras }}
+            />
+          )}
+          {qr && (
+            <figure className="m-0 flex flex-col items-center">
+              <a
+                href={urlPedido}
+                className="block"
+                style={{ width: LADO_QR, height: LADO_QR }}
+                aria-label={`Abrir el pedido ${folio}`}
+                dangerouslySetInnerHTML={{ __html: qr }}
+              />
+              <figcaption className="mt-1.5 max-w-[16ch] text-center text-[11px] leading-snug text-tinta-suave">
+                Escanea para ver el pedido
+              </figcaption>
+            </figure>
+          )}
         </div>
       </div>
 
@@ -177,7 +246,18 @@ export default async function PaginaSurtido({ params }: Contexto) {
           <ChevronLeft aria-hidden className="size-4" />
           Pedido {hoja.pedido.folio ?? `#${hoja.pedido.id}`}
         </Link>
-        <BotonImprimir />
+        <div className="flex items-center gap-2">
+          <a
+            href={`${rutaPedido}/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="solo-pantalla rotulo-tecnico inline-flex h-12 items-center gap-2 rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta"
+          >
+            <FileDown aria-hidden className="size-4" />
+            Descargar PDF
+          </a>
+          <BotonImprimir />
+        </div>
       </div>
 
       <article className="lamina p-6 sm:p-8 print:border-0 print:p-0 print:shadow-none">

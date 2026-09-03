@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect, unstable_rethrow } from "next/navigation";
-import { ChevronLeft, Printer } from "lucide-react";
+import { ChevronLeft, FileDown, Printer } from "lucide-react";
 import clsx from "clsx";
 import { pesos } from "@/lib/formato";
 import { obtenerPedido } from "@/lib/mostrador/datos";
@@ -181,13 +181,25 @@ export default async function PaginaPedido({ params }: Contexto) {
             </div>
           </div>
           {conSurtido && (
-            <Link
-              href={`${RUTA_MOSTRADOR}/pedidos/${pedido.id}/surtido`}
-              className="rotulo-tecnico inline-flex h-12 items-center gap-2 rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta"
-            >
-              <Printer aria-hidden className="size-4" />
-              Hoja de surtido
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={`${RUTA_MOSTRADOR}/pedidos/${pedido.id}/surtido`}
+                className="rotulo-tecnico inline-flex h-12 items-center gap-2 rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta"
+              >
+                <Printer aria-hidden className="size-4" />
+                Hoja de surtido
+              </Link>
+              {/* La hoja en PDF la sirve /pdf (misma cabecera con código de barras y QR). */}
+              <a
+                href={`${RUTA_MOSTRADOR}/pedidos/${pedido.id}/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rotulo-tecnico inline-flex h-12 items-center gap-2 rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta"
+              >
+                <FileDown aria-hidden className="size-4" />
+                Descargar PDF
+              </a>
+            </div>
           )}
         </div>
 

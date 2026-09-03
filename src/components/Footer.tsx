@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Phone } from "lucide-react";
+import { LockKeyhole, MapPin, Phone } from "lucide-react";
 import { MarcaAV } from "@/components/LogoAV";
 import { IconWhatsApp } from "@/components/IconWhatsApp";
 import { NEGOCIO, urlWhatsApp, PRELLENADOS } from "@/config/negocio";
@@ -168,10 +168,22 @@ export async function Footer() {
       </div>
 
       <div className="relative border-t border-white/15">
-        <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-white/60">
-          © {new Date().getFullYear()} {NEGOCIO.razonSocial} · {NEGOCIO.ciudad} ·
-          Todos los derechos reservados.
-        </p>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4">
+          <p className="text-xs text-white/60">
+            © {new Date().getFullYear()} {NEGOCIO.razonSocial} · {NEGOCIO.ciudad} ·
+            Todos los derechos reservados.
+          </p>
+          {/* Puerta al área privada de los vendedores. Discreta a propósito: es
+              para quien ya sabe que existe, no una llamada a la acción del
+              cliente (por eso sin ámbar). */}
+          <Link
+            href="/mostrador/login"
+            className="rotulo-tecnico inline-flex min-h-10 items-center gap-2 rounded-md border border-white/30 px-3.5 text-[11.5px] text-white/85 transition-colors duration-150 hover:border-white hover:text-white"
+          >
+            <LockKeyhole aria-hidden className="size-3.5" />
+            Mostrador
+          </Link>
+        </div>
       </div>
     </footer>
   );

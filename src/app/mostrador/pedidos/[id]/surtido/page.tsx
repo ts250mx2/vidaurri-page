@@ -1,0 +1,210 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
+import clsx from "clsx";
+import { NEGOCIO } from "@/config/negocio";
+import { hojaSurtido } from "@/lib/mostrador/datos";
+import { ETIQUETA_ORIGEN, fechaHora, telefonoLegible } from "@/lib/mostrador/etiquetas";
+import { idDeRuta } from "@/lib/mostrador/reenvio";
+import { ETIQUETA_ESTATUS } from "@/lib/mostrador/reglas";
+import type { HojaSurtido, RenglonSurtido } from "@/lib/mostrador/tipos";
+import { RUTA_MOSTRADOR } from "@/lib/mostrador/volver";
+import { BotonImprimir } from "./BotonImprimir";
+
+// Hoja de surtido: lo que se lleva el almacenista al anaquel. Va sin precios
+// a propósito (aquí se surte, no se cobra) y con la existencia releída por IA
+// al momento de generarla, no la de la captura. Al imprimir desaparecen la
+// barra del mostrador y los botones (`solo-pantalla`); lo demás es papel.
+
+export const metadata: Metadata = {
+  title: "Hoja de surtido · Mostrador",
+};
+
+interface Contexto {
+  params: Promise<{ id: string }>;
+}
+
+interface CargaHoja {
+  hoja: HojaSurtido | null;
+  error: string | null;
+}
+
+async function cargarHoja(id: number): Promise<CargaHoja> {
+  try {
+    return { hoja: await hojaSurtido(id), error: null };
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[mostrador] fallo armando la hoja de surtido", id, error);
+    return { hoja: null, error: error instanceof Error ? error.message : "No fue posible armar la hoja" };
+  }
+}
+
+const CLASE_TH =
+  "border-b-2 border-tinta px-2 py-2 text-left font-display text-[11px] font-bold uppercase tracking-[0.12em] text-tinta";
+const CLASE_TD = "border-b border-linea px-2 py-2.5 align-top text-sm";
+
+function referencia(renglon: RenglonSurtido): string {
+  if (renglon.codigo) return renglon.codigo;
+  if (renglon.idPiezaUsada !== null) return `Usada #${renglon.idPiezaUsada}`;
+  return "—";
+}
+
+function Encabezado({ hoja }: { hoja: HojaSurtido }) {
+  const { pedido } = hoja;
+  return (
+    <header className="border-b-2 border-tinta pb-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="rotulo-tecnico text-xs text-tinta-suave">{NEGOCIO.nombre}</p>
+          <h1 className="titulo-lamina mt-1 text-3xl">Hoja de surtido</h1>
+        </div>
+        <div className="text-right">
+          <p className="rotulo-tecnico text-[11px] text-tinta-suave">Folio</p>
+          <p className="titulo-lamina num-tab text-3xl">{pedido.folio ?? `#${pedido.id}`}</p>
+          <p className="mt-1 text-xs text-tinta-suave">{ETIQUETA_ESTATUS[pedido.estatus]}</p>
+        </div>
+      </div>
+
+      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+        <div className="col-span-2">
+          <dt className="rotulo-tecnico text-[11px] text-tinta-suave">Cliente</dt>
+          <dd className="font-semibold">
+            {pedido.cliente}
+            {pedido.telefono && (
+              <span className="num-tab ml-2 font-mono font-normal text-tinta-suave">{telefonoLegible(pedido.telefono)}</span>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="rotulo-tecnico text-[11px] text-tinta-suave">Recoge en</dt>
+          <dd className="font-semibold">
+            {hoja.sucursal.nombre}
+            {hoja.trasladar && (
+              <span className="sello ml-2 text-anotacion">Trasladar a {hoja.sucursal.nombre}</span>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="rotulo-tecnico text-[11px] text-tinta-suave">Capturó</dt>
+          <dd className="font-mono">{pedido.capturadoPor ?? "cliente"}</dd>
+        </div>
+        <div>
+          <dt className="rotulo-tecnico text-[11px] text-tinta-suave">Pedido</dt>
+          <dd className="num-tab font-mono">{fechaHora(pedido.enviadoEn ?? pedido.creadoEn) || "—"}</dd>
+        </div>
+        <div>
+          <dt className="rotulo-tecnico text-[11px] text-tinta-suave">Hoja generada</dt>
+          <dd className="num-tab font-mono">{fechaHora(hoja.generadoEn) || "—"}</dd>
+        </div>
+      </dl>
+    </header>
+  );
+}
+
+function TablaSurtido({ renglones }: { renglones: RenglonSurtido[] }) {
+  return (
+    <table className="mt-4 w-full border-collapse">
+      <thead>
+        <tr>
+          <th scope="col" className={CLASE_TH}>#</th>
+          <th scope="col" className={CLASE_TH}>Origen</th>
+          <th scope="col" className={CLASE_TH}>Código / ID usada</th>
+          <th scope="col" className={CLASE_TH}>Descripción</th>
+          <th scope="col" className={clsx(CLASE_TH, "text-right")}>Cant.</th>
+          <th scope="col" className={clsx(CLASE_TH, "text-right")}>Existencia</th>
+          <th scope="col" className={CLASE_TH}>Ubicación</th>
+          <th scope="col" className={clsx(CLASE_TH, "text-center")}>Surtido</th>
+        </tr>
+      </thead>
+      <tbody>
+        {renglones.map((renglon) => (
+          <tr key={renglon.partida}>
+            <td className={clsx(CLASE_TD, "num-tab font-mono text-tinta-suave")}>{renglon.partida}</td>
+            <td className={clsx(CLASE_TD, "whitespace-nowrap")}>{ETIQUETA_ORIGEN[renglon.origen]}</td>
+            <td className={clsx(CLASE_TD, "num-tab whitespace-nowrap font-mono font-semibold")}>{referencia(renglon)}</td>
+            <td className={CLASE_TD}>{renglon.descripcion}</td>
+            <td className={clsx(CLASE_TD, "num-tab text-right font-mono text-base font-bold")}>{renglon.cantidad}</td>
+            <td
+              className={clsx(
+                CLASE_TD,
+                "num-tab text-right font-mono",
+                renglon.existenciaActual !== null && renglon.existenciaActual < renglon.cantidad && "font-bold text-anotacion"
+              )}
+            >
+              {renglon.existenciaActual ?? "s/d"}
+            </td>
+            <td className={clsx(CLASE_TD, "num-tab font-mono")}>{renglon.ubicacionUsada ?? "—"}</td>
+            <td className={clsx(CLASE_TD, "text-center")}>
+              <span aria-hidden className="inline-block size-5 border-2 border-tinta align-middle" />
+              <span className="sr-only">Casilla para marcar surtido</span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+export default async function PaginaSurtido({ params }: Contexto) {
+  const { id } = await params;
+  const idPedido = idDeRuta(id);
+  if (idPedido === null) notFound();
+
+  const { hoja, error } = await cargarHoja(idPedido);
+  if (error) {
+    return (
+      <div role="alert" className="lamina mx-auto max-w-md border-anotacion px-5 py-6 text-center">
+        <p className="rotulo-tecnico text-xs text-anotacion">No se pudo armar la hoja</p>
+        <p className="mt-2 text-sm text-tinta">{error}</p>
+        <Link href={`${RUTA_MOSTRADOR}/pedidos/${idPedido}`} className="mt-4 inline-block text-sm font-semibold underline underline-offset-4">
+          Volver al pedido
+        </Link>
+      </div>
+    );
+  }
+  if (!hoja) notFound();
+
+  const rutaPedido = `${RUTA_MOSTRADOR}/pedidos/${hoja.pedido.id}`;
+
+  return (
+    <div className="mx-auto flex max-w-4xl flex-col gap-4">
+      <div className="solo-pantalla flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href={rutaPedido}
+          className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-tinta-suave transition-colors duration-150 hover:text-tinta"
+        >
+          <ChevronLeft aria-hidden className="size-4" />
+          Pedido {hoja.pedido.folio ?? `#${hoja.pedido.id}`}
+        </Link>
+        <BotonImprimir />
+      </div>
+
+      <article className="lamina p-6 sm:p-8 print:border-0 print:p-0 print:shadow-none">
+        <Encabezado hoja={hoja} />
+
+        {hoja.renglones.length === 0 ? (
+          <p className="mt-6 text-sm text-tinta-suave">Este pedido no tiene partidas que surtir.</p>
+        ) : (
+          <TablaSurtido renglones={hoja.renglones} />
+        )}
+
+        <footer className="mt-8 grid gap-6 sm:grid-cols-[1fr_16rem]">
+          <div>
+            <p className="rotulo-tecnico text-[11px] text-tinta-suave">Observaciones</p>
+            <p className={clsx("mt-1 text-sm", !hoja.pedido.observaciones && "text-tinta-suave")}>
+              {hoja.pedido.observaciones ?? "Sin observaciones."}
+            </p>
+            <p className="mt-4 text-xs text-tinta-suave">
+              La existencia es la de bdav / Bodega Usado al generar la hoja; &ldquo;s/d&rdquo; = la base no respondió.
+            </p>
+          </div>
+          <div className="self-end">
+            <div className="border-b-2 border-tinta pt-10" />
+            <p className="rotulo-tecnico mt-1.5 text-[11px] text-tinta-suave">Surtió (nombre y firma)</p>
+          </div>
+        </footer>
+      </article>
+    </div>
+  );
+}

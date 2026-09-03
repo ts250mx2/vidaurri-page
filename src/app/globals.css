@@ -578,3 +578,17 @@ textarea {
     padding-top: 7rem;
   }
 }
+
+/* ============================================================
+   IMPRESIÓN
+   Lo que solo sirve en pantalla (barra del mostrador, botón de
+   imprimir, navegación) desaparece al imprimir la hoja de surtido.
+   ============================================================ */
+.solo-pantalla {
+}
+
+@media print {
+  .solo-pantalla {
+    display: none !important;
+  }
+}

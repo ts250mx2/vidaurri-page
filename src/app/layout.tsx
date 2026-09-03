@@ -1,11 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { BarraMovil } from "@/components/BarraMovil";
-import { ChatVico } from "@/components/ChatVico";
-import { DefsMetal } from "@/components/DefsMetal";
 import { NEGOCIO, urlSitio } from "@/config/negocio";
 
 // Tipografía de la vitrina: Montserrat en pesos altos rotula los titulares y la
@@ -47,6 +42,10 @@ export const viewport: Viewport = {
   themeColor: "#111116",
 };
 
+// Este layout solo pone el documento: fuentes, hoja global y metadatos. El
+// cromo público (Header, Footer, barra móvil, chat de Vico) vive en el grupo de
+// rutas `(sitio)`, porque `/mostrador` —la pantalla interna del vendedor— usa
+// el mismo documento pero NO debe cargar ese cromo: ahí no hay clientes.
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -80,13 +79,7 @@ export default function RootLayout({
           the finish review, the verdict, DESIGN.md, and every shipping raster
           carrying its provenance.
         */}
-        <DefsMetal />
-        <Header />
-        {/* pb en móvil: espacio para la barra fija inferior */}
-        <main className="pb-24 md:pb-0">{children}</main>
-        <Footer />
-        <BarraMovil />
-        <ChatVico />
+        {children}
       </body>
     </html>
   );

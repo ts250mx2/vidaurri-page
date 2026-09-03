@@ -3,13 +3,19 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { PRELLENADOS, urlWhatsApp } from "@/config/negocio";
 import { IconWhatsApp } from "@/components/IconWhatsApp";
+import { CromoPublico } from "@/components/CromoPublico";
 
 // 404 en tono de taller: la página se chocó, pero la pieza seguramente existe.
 // Ningún callejón sin salida — catálogo (ámbar, la acción) y WhatsApp (verde).
 // El código del error va abajo, como una nota al pie del plano: nunca como
 // etiqueta encima del título.
 //
-// Sin componentes cliente: solo Link y <a>.
+// Vive en la raíz de `app/` (el not-found global tiene que estar ahí), fuera
+// del grupo `(sitio)`, así que el cromo público no le llega solo: se viste
+// explícitamente con `CromoPublico` para que el visitante perdido conserve el
+// header, la barra móvil y el chat de Vico.
+//
+// Sin componentes cliente propios: solo Link y <a>.
 
 export const metadata: Metadata = {
   title: "Página no encontrada",
@@ -17,6 +23,7 @@ export const metadata: Metadata = {
 
 export default function NoEncontrada() {
   return (
+    <CromoPublico>
     <section className="sobre-plano relative isolate overflow-hidden bg-plano-hondo text-white">
 
       <div className="relative mx-auto flex max-w-3xl flex-col items-start px-4 py-24 md:py-32">
@@ -56,5 +63,6 @@ export default function NoEncontrada() {
         </p>
       </div>
     </section>
+    </CromoPublico>
   );
 }

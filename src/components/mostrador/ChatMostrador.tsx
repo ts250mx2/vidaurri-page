@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { LogoAV } from "@/components/LogoAV";
 import { TextoVico, type FotoChat } from "@/components/chat/TextoVico";
 import { CLASE_BOTON_SECUNDARIO, CLASE_CAMPO } from "@/components/mostrador/estilos";
+import { ProductosDeVico, type AgregarDeVico } from "@/components/mostrador/ProductosDeVico";
 import { NEGOCIO } from "@/config/negocio";
 import {
   arregloDe,
@@ -18,6 +19,7 @@ import {
 import {
   SUCURSALES_ENTREGA,
   type PedidoDetalle,
+  type ProductoMencionado,
   type SucursalEntrega,
 } from "@/lib/mostrador/tipos";
 
@@ -27,12 +29,16 @@ import {
 // atiende NO lo decide el modelo: PAGE manda `idCliente` en cada turno y el
 // servidor cotiza con ese descuento. Cada respuesta trae el borrador tal
 // como quedó y se sube al padre con `onPedido`, para que la tarjeta de la
-// derecha se actualice sin que el vendedor recargue.
+// derecha se actualice sin que el vendedor recargue. Las piezas que Vico
+// consultó en el turno (`productos`) se pintan bajo su respuesta con el botón
+// "Agregar al pedido", que el padre resuelve con `onAgregar`.
 
 interface Mensaje {
   rol: "vico" | "vendedor";
   texto: string;
   fotos?: FotoChat[];
+  /** Piezas consultadas en el turno, ya con precio para el cliente. */
+  productos?: ProductoMencionado[];
   /** Rótulo de la falla (tinta de anotación). Ausente = mensaje normal. */
   falla?: string;
 }
@@ -42,6 +48,8 @@ export interface PropsChatMostrador {
   sucursal: SucursalEntrega;
   /** Borrador tras el turno; null cuando Vico lo cerró (lo envió o lo canceló). */
   onPedido: (pedido: PedidoDetalle | null) => void;
+  /** "Agregar al pedido" de un renglón; null si quedó, si no el texto del fallo. */
+  onAgregar: AgregarDeVico;
 }
 
 /** Id de sesión de la pestaña. SIN el prefijo 77 del chat público: ese es un
@@ -51,6 +59,8 @@ const MAX_MENSAJE = 2000;
 /** Un poco por encima de los 115 s del proxy, que ya responde con error legible. */
 const TIEMPO_MAXIMO_MS = 120_000;
 const MAX_FOTOS = 6;
+/** Los mismos 8 que promete IA; por si un día manda más, no se pinta una lista infinita. */
+const MAX_PRODUCTOS = 8;
 
 const SALUDO: Mensaje = {
   rol: "vico",
@@ -92,7 +102,29 @@ function fotosDe(datos: Parameters<typeof arregloDe>[0]): FotoChat[] {
     .slice(0, MAX_FOTOS);
 }
 
-export function ChatMostrador({ idCliente, sucursal, onPedido }: PropsChatMostrador) {
+/** ¿Trae lo mínimo para pintar el renglón y armar la partida? */
+function esProductoMencionado(p: Partial<ProductoMencionado>): p is ProductoMencionado {
+  const origenValido = p.origen === "nueva" || p.origen === "usada";
+  const referenciaValida =
+    p.origen === "nueva" ? typeof p.codigo === "string" && p.codigo.length > 0 : typeof p.idPiezaUsada === "number";
+  return (
+    origenValido &&
+    referenciaValida &&
+    typeof p.codigo === "string" &&
+    typeof p.descripcion === "string" &&
+    typeof p.precioConIva === "number" &&
+    typeof p.existencia === "number"
+  );
+}
+
+/** Piezas del turno (`productos`), opcionales mientras IA no las mande: vacío si faltan. */
+function productosDe(datos: Parameters<typeof arregloDe>[0]): ProductoMencionado[] {
+  return arregloDe<Partial<ProductoMencionado>>(datos, "productos")
+    .filter(esProductoMencionado)
+    .slice(0, MAX_PRODUCTOS);
+}
+
+export function ChatMostrador({ idCliente, sucursal, onPedido, onAgregar }: PropsChatMostrador) {
   const [mensajes, setMensajes] = useState<Mensaje[]>([SALUDO]);
   const [entrada, setEntrada] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -133,7 +165,10 @@ export function ChatMostrador({ idCliente, sucursal, onPedido }: PropsChatMostra
       const { status, datos } = respuesta;
       const textoVico = typeof datos?.respuesta === "string" ? datos.respuesta : "";
       if (esOk(datos) && textoVico) {
-        setMensajes((m) => [...m, { rol: "vico", texto: textoVico, fotos: fotosDe(datos) }]);
+        setMensajes((m) => [
+          ...m,
+          { rol: "vico", texto: textoVico, fotos: fotosDe(datos), productos: productosDe(datos) },
+        ]);
         // `pedido` viene siempre (null si Vico lo envió o canceló): solo se
         // avisa cuando IA de veras lo mandó, no cuando la respuesta no lo trae.
         if (datos !== null && "pedido" in datos) onPedido(pedidoDe(datos));
@@ -229,6 +264,9 @@ export function ChatMostrador({ idCliente, sucursal, onPedido }: PropsChatMostra
                     </a>
                   ))}
                 </div>
+              )}
+              {m.productos && m.productos.length > 0 && (
+                <ProductosDeVico productos={m.productos} ocupado={enviando} onAgregar={onAgregar} />
               )}
             </div>
           );

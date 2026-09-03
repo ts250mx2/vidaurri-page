@@ -16,7 +16,7 @@ import {
   sesionVencida,
   type RespuestaProxy,
 } from "@/lib/mostrador/navegador";
-import type { PedidoDetalle, PerfilPos, SucursalEntrega } from "@/lib/mostrador/tipos";
+import type { CapturaPartida, PedidoDetalle, PerfilPos, SucursalEntrega } from "@/lib/mostrador/tipos";
 import { PanelBorrador } from "./PanelBorrador";
 import { PanelCliente } from "./PanelCliente";
 
@@ -128,13 +128,20 @@ export function NuevoPedido({ borradorInicial, perfil, vendedor, errorInicial }:
     return abrirBorrador({ idCliente: null, sucursal });
   }
 
-  async function agregarPartida(codigo: string, cantidad: number): ResultadoAccion {
+  /**
+   * POST /borrador/partidas con la captura tal cual (sin precio: lo cotiza IA).
+   * Es el mismo camino para el buscador manual y para el "Agregar al pedido"
+   * de las piezas que Vico consultó; los 400/409 de IA vuelven como texto.
+   */
+  async function capturarPartida(captura: CapturaPartida): ResultadoAccion {
     const actual = await asegurarBorrador();
     if (!actual) return ERROR_BORRADOR;
-    const respuesta = await llamarProxy("/borrador/partidas", {
-      cuerpo: { origen: "nueva", codigo, idPiezaUsada: null, cantidad },
-    });
+    const respuesta = await llamarProxy("/borrador/partidas", { cuerpo: captura });
     return tomarPedido(respuesta, ERROR_PARTIDA);
+  }
+
+  function agregarPartida(codigo: string, cantidad: number): ResultadoAccion {
+    return capturarPartida({ origen: "nueva", codigo, idPiezaUsada: null, cantidad });
   }
 
   async function quitarPartida(idPartida: number): ResultadoAccion {
@@ -241,7 +248,12 @@ export function NuevoPedido({ borradorInicial, perfil, vendedor, errorInicial }:
           />
         </section>
         <section aria-label={`Chat con Vico`} className="lg:col-span-5">
-          <ChatMostrador idCliente={idCliente} sucursal={sucursal} onPedido={recibirPedidoDeVico} />
+          <ChatMostrador
+            idCliente={idCliente}
+            sucursal={sucursal}
+            onPedido={recibirPedidoDeVico}
+            onAgregar={capturarPartida}
+          />
         </section>
         <section aria-label="Pedido en captura" className="lg:col-span-4">
           <PanelBorrador

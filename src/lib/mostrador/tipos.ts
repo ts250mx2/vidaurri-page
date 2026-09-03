@@ -167,3 +167,39 @@ export interface ClienteDescuento {
   /** El cliente puede levantar pedidos por su cuenta (WhatsApp / web). */
   permitirPedido: boolean;
 }
+
+/**
+ * Pieza que las herramientas de Vico consultaron EN ESE TURNO
+ * (`POST /api/mostrador/vico` → `productos`, máximo 8), con el precio que
+ * Vico vio: ya con el descuento del cliente del turno. Es lo que la pantalla
+ * convierte en el botón "Agregar al pedido" sin volver a buscar. Primero van
+ * las que Vico mencionó en su texto, después el resto de las consultadas.
+ */
+export interface ProductoMencionado {
+  origen: "nueva" | "usada";
+  /** articulos.codigo (nueva) o piezas.codigo (usada). */
+  codigo: string;
+  /** piezas.id_pieza de la Bodega Usado; null en nuevas. */
+  idPiezaUsada: number | null;
+  descripcion: string;
+  /** IVA incluido, ya con el descuento del cliente. */
+  precioConIva: number;
+  /** Nueva: piezas en tienda (entregaInmediata). Usada: existencia de la Bodega. */
+  existencia: number;
+  /** URL de la foto sellada (la misma del arreglo `fotos` del turno); null si no hay. */
+  foto: string | null;
+  /**
+   * Solo nuevas y solo si IA lo manda: `true` cuando la herramienta la marcó
+   * disponible sobre pedido, `false` cuando la consultó y no había. Ausente o
+   * null = sin dato: la pantalla deja agregar y el mostrador confirma después.
+   */
+  sobrePedido?: boolean | null;
+}
+
+/** Lo que el navegador manda a `POST /api/mostrador/borrador/partidas`; el precio lo cotiza IA. */
+export interface CapturaPartida {
+  origen: OrigenPartida;
+  codigo: string | null;
+  idPiezaUsada: number | null;
+  cantidad: number;
+}

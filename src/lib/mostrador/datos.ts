@@ -15,6 +15,7 @@ import type {
   ClienteDescuento,
   EstatusPedido,
   FiltrosPedidos,
+  HojaBackorder,
   HojaSurtido,
   PaginaPedidos,
   PedidoDetalle,
@@ -166,6 +167,12 @@ export async function obtenerPedido(id: number): Promise<PedidoDetalle | null> {
 export async function hojaSurtido(id: number): Promise<HojaSurtido | null> {
   const datos = await pedirONulo(`/pedidos/${id}/surtido`);
   return datos === null ? null : campo<HojaSurtido>(datos, "hoja");
+}
+
+/** Hoja de back order a Aldo (renglones sobre pedido, proveedor y totales sin IVA); null si el pedido no existe. */
+export async function hojaBackorder(id: number): Promise<HojaBackorder | null> {
+  const datos = await pedirONulo(`/pedidos/${id}/backorder`);
+  return datos === null ? null : campo<HojaBackorder>(datos, "hoja");
 }
 
 /** Borrador en curso del vendedor de la cookie; null si no tiene ninguno. */

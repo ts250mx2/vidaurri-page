@@ -1,4 +1,4 @@
-import type { CanalPedido, EstatusPedido, PerfilPos, SucursalEntrega } from "./tipos";
+import type { CanalPedido, EstatusPedido, PartidaPedido, PerfilPos, SucursalEntrega } from "./tipos";
 
 // Reglas de pedidos copiadas literal de vidaurri-ia (`src/lib/pedidos.ts`).
 // Aquí solo sirven para PINTAR: qué botones de estatus mostrar a cada perfil y
@@ -72,6 +72,31 @@ export function puedeCancelarCliente(estatus: EstatusPedido): boolean {
  */
 export function puedeEditarPedido(estatus: EstatusPedido): boolean {
   return estatus === "borrador" || estatus === "enviado" || estatus === "confirmado";
+}
+
+/**
+ * Estatus en los que el pedido puede tener (o volver a pedir) su back order a
+ * Aldo: confirmado, listo o entregado. Copia de IA (contrato backorder); aquí
+ * solo decide si se pinta el reintento, IA responde 409 si se desfasó.
+ */
+export function puedeTenerBackorder(estatus: EstatusPedido): boolean {
+  return estatus === "confirmado" || estatus === "listo" || estatus === "entregado";
+}
+
+/**
+ * Partidas que se piden al proveedor (copia de `partidasParaBackorder` de
+ * IA): las que el mostrador marcó "sobre pedido" al confirmar, o las que
+ * nacieron sobre pedido y nadie dijo todavía que sí hay en tienda
+ * (pendiente). Nunca usadas; nunca confirmadas ni sin existencia. Aquí solo
+ * decide si hay hoja de back order que imprimir.
+ */
+export function partidasParaBackorder(partidas: PartidaPedido[]): PartidaPedido[] {
+  return partidas.filter(
+    (partida) =>
+      partida.origen !== "usada" &&
+      (partida.estatusPartida === "sobre_pedido" ||
+        (partida.origen === "sobre_pedido" && partida.estatusPartida === "pendiente"))
+  );
 }
 
 /** Topes de captura (mismos valores que IA); aquí solo acotan en pantalla antes de viajar. */

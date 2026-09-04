@@ -18,6 +18,7 @@ import {
   ETIQUETA_CANAL,
   ETIQUETA_SUCURSAL,
   ETIQUETA_SUCURSAL_CORTA,
+  etiquetaBkoPos,
   etiquetaCotizaPos,
   fechaHora,
   fechaHoraCorta,
@@ -34,7 +35,8 @@ import { RUTA_MOSTRADOR } from "@/lib/mostrador/volver";
 // lo que no cabe se trunca y el texto completo queda en el title. Siete
 // columnas agrupan lo que antes eran doce: pedido (folio + fecha), cliente
 // (nombre + teléfono + identidad en el POS), piezas (+ sucursal), origen
-// (canal + quién capturó), total (+ IVA incluido + cotización POS), estatus
+// (canal + quién capturó), total (+ IVA incluido + cotización y back order
+// del POS), estatus
 // (píldora + fecha del último cambio) y acciones. Bajo `lg` (tablet) se
 // esconden piezas y origen y su dato se apila en una línea bajo el cliente.
 // Cada renglón lleva a la izquierda una barra con el color de su estatus, que
@@ -190,6 +192,7 @@ function CeldaTotal({ pedido }: { pedido: PedidoResumen }) {
   const numCotizaPos = pedido.numCotizaPos ?? null;
   const estado = pedido.cotizaPosEstado;
   const conError = numCotizaPos === null && estado === "error";
+  const numBkoPos = pedido.numBkoPos ?? null;
   return (
     <td className={clsx(CLASE_TD, "text-right")}>
       <p className="num-tab font-mono text-sm font-bold text-tinta">{pesos(pedido.total)}</p>
@@ -205,6 +208,14 @@ function CeldaTotal({ pedido }: { pedido: PedidoResumen }) {
       {conError && (
         <p className="mt-0.5 truncate text-[11px] font-medium text-anotacion" title={pedido.cotizaPosError ?? undefined}>
           Cot. POS con error
+        </p>
+      )}
+      {numBkoPos !== null && (
+        <p
+          className="num-tab mt-0.5 truncate font-mono text-[11px] text-tinta-suave"
+          title={pedido.bkoPosEstado ? etiquetaBkoPos(pedido.bkoPosEstado) : undefined}
+        >
+          BKO #{numBkoPos}
         </p>
       )}
     </td>

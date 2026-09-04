@@ -18,6 +18,7 @@ import { idDeRuta } from "@/lib/mostrador/reenvio";
 import {
   CLASE_SELLO_ESTATUS,
   ETIQUETA_ESTATUS,
+  partidasParaBackorder,
   puedeCambiarEstatus,
   puedeEditarPedido,
 } from "@/lib/mostrador/reglas";
@@ -25,6 +26,7 @@ import { sesionMostrador } from "@/lib/mostrador/sesion";
 import type { EventoPedido, PedidoDetalle } from "@/lib/mostrador/tipos";
 import { RUTA_LOGIN_MOSTRADOR, RUTA_MOSTRADOR } from "@/lib/mostrador/volver";
 import { AccionesPedido } from "./AccionesPedido";
+import { BackorderPos } from "./BackorderPos";
 import { ConfirmacionPartidas } from "./ConfirmacionPartidas";
 import { CotizacionPos } from "./CotizacionPos";
 import { EdicionObservaciones, EdicionPartidas, EdicionSucursal } from "./EdicionPedido";
@@ -34,8 +36,8 @@ import { TablaPartidas } from "./TablaPartidas";
 // a la cola, imprimir la orden (abre la hoja de surtido en otra pestaña y
 // lanza el diálogo de impresión), descargar el PDF y, si el perfil puede, el
 // bote de cancelar con su diálogo (la misma isla que en la cola). Debajo, la
-// cabecera con folio, estatus y datos (incluida la cotización espejo en el
-// POS), partidas, totales con IVA incluido, observaciones, los botones de
+// cabecera con folio, estatus y datos (incluidas la cotización espejo y la
+// back order a Aldo en el POS), partidas, totales con IVA incluido, observaciones, los botones de
 // avance de estatus según el perfil (ámbar solo en "Confirmar pedido") y la
 // bitácora al pie. Mientras `puedeEditarPedido` (borrador, enviado,
 // confirmado) las partidas, la sucursal y las observaciones se editan en las
@@ -187,6 +189,11 @@ export default async function PaginaPedido({ params }: Contexto) {
   const puedeCancelar = puedeCambiarEstatus(sesion.perfil, pedido.estatus, "cancelado");
   // Campos nuevos del contrato (B5): mientras IA no los mande, la sección no se pinta.
   const conCotizaPos = pedido.cotizaPosEstado !== undefined;
+  // Back order a Aldo: se pinta si IA ya manda su estado o si hay renglones
+  // sobre pedido (la hoja se imprime aunque el POS no la tenga todavía). En
+  // borrador no: sin folio no hay pedido que mandar a Aldo.
+  const partidasAldo = partidasParaBackorder(pedido.partidas);
+  const conBkoPos = pedido.estatus !== "borrador" && (pedido.bkoPosEstado !== undefined || partidasAldo.length > 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -265,6 +272,19 @@ export default async function PaginaPedido({ params }: Contexto) {
                 numCotizaPos={pedido.numCotizaPos ?? null}
                 estado={pedido.cotizaPosEstado ?? "pendiente"}
                 errorPos={pedido.cotizaPosError ?? null}
+              />
+            </Dato>
+          )}
+          {conBkoPos && (
+            <Dato etiqueta="Back order Aldo" className="col-span-2 sm:col-span-3 lg:col-span-4">
+              <BackorderPos
+                idPedido={pedido.id}
+                estatus={pedido.estatus}
+                numBkoPos={pedido.numBkoPos ?? null}
+                estado={pedido.bkoPosEstado ?? null}
+                errorPos={pedido.bkoPosError ?? null}
+                compromiso={pedido.bkoPosCompromiso ?? null}
+                conPartidasSobrePedido={partidasAldo.length > 0}
               />
             </Dato>
           )}

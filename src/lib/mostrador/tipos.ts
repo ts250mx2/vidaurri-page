@@ -97,6 +97,18 @@ export interface PedidoResumen {
   cotizaPosEstado?: string;
   /** Texto del último fallo (≤200) cuando `cotizaPosEstado` es "error". */
   cotizaPosError?: string | null;
+  /**
+   * Back order a Aldo Autopartes en el POS (bdav.back_order): la levanta IA
+   * al confirmar el pedido con partidas sobre pedido (contrato backorder).
+   * Opcionales por la misma razón que las de cotización.
+   */
+  numBkoPos?: number | null;
+  /** pendiente | simulada | insertada | omitida | error | cancelada */
+  bkoPosEstado?: string;
+  /** En "error", el último fallo (≤200); en "simulada", el resumen de lo que se habría escrito. */
+  bkoPosError?: string | null;
+  /** 'MARTES' | 'VIERNES': el día en que Aldo entrega. */
+  bkoPosCompromiso?: string | null;
 }
 
 export interface PedidoDetalle extends PedidoResumen {
@@ -150,6 +162,43 @@ export interface HojaSurtido {
   sucursal: { clave: SucursalEntrega; nombre: string };
   /** Hay que mover mercancía a la sucursal donde recoge el cliente. */
   trasladar: boolean;
+  generadoEn: string;
+}
+
+/** Renglón de la hoja de back order (`GET /api/mostrador/pedidos/[id]/backorder`, contrato backorder). */
+export interface RenglonBackorderHoja {
+  partida: number;
+  codigo: string;
+  descripcion: string;
+  cantidad: number;
+  /** Como lo guarda el POS en detalle_bko: sin IVA, ya con el descuento del cliente. */
+  precioSinIva: number;
+  importeSinIva: number;
+  diasEntrega: number | null;
+}
+
+export interface HojaBackorder {
+  pedido: PedidoDetalle;
+  backorder: {
+    numBko: number | null;
+    /** pendiente | simulada | insertada | omitida | error | cancelada */
+    estado: string;
+    /** En "error", el fallo; en "simulada", el resumen de lo que se habría escrito. */
+    error: string | null;
+    /** 'AAAA-MM-DD'; null mientras no se ha levantado en el POS. */
+    fechaBko: string | null;
+    /** 'MARTES' | 'VIERNES'. */
+    fechaCompromiso: string | null;
+    /** Nombre del vendedor del POS (POLENDO / ECHAVARRI / JR) que pidió o pediría; null si bdav no respondió. */
+    vendedor: string | null;
+    idVendedor: number | null;
+  };
+  /** bdav.proveedores id 1 (Aldo, solo lectura); null si bdav no respondió. */
+  proveedor: { nombre: string; direccion: string; ciudad: string; telefono: string } | null;
+  /** Partidas sobre pedido del pedido, aunque todavía no haya back order en el POS. */
+  renglones: RenglonBackorderHoja[];
+  /** Subtotal sin IVA; el IVA aparte; el total lo incluye. */
+  totales: { subtotal: number; iva: number; total: number };
   generadoEn: string;
 }
 

@@ -81,6 +81,11 @@ const ETIQUETA_EVENTO: Readonly<Record<string, string>> = {
   cotizacion_pos: "Cotización levantada en el POS",
   cotizacion_pos_error: "Error al cotizar en el POS",
   cotizacion_pos_cancelada: "Cotización cancelada en el POS",
+  backorder_pos: "Back order levantada en el POS",
+  backorder_pos_simulada: "Back order simulada (el POS no se tocó)",
+  backorder_pos_cancelada: "Back order cancelada en el POS",
+  backorder_pos_error: "Error al crear la back order en el POS",
+  backorder_pos_omitida: "Back order omitida",
 };
 
 /**
@@ -190,4 +195,44 @@ export const ETIQUETA_COTIZA_POS: Readonly<Record<string, string>> = {
 /** Texto del estado de la cotización; uno desconocido sale tal cual, sin guiones. */
 export function etiquetaCotizaPos(estado: string): string {
   return ETIQUETA_COTIZA_POS[estado] ?? estado.replace(/_/g, " ");
+}
+
+// --- Back order a Aldo en el POS -----------------------------------------
+
+/**
+ * Cómo se lee cada `bkoPosEstado` (contrato backorder). Con número la
+ * pantalla lo pone al lado; la píldora va siempre, porque "insertada" y
+ * "cancelada" comparten número y solo el estado los distingue.
+ */
+export const ETIQUETA_BKO_POS: Readonly<Record<string, string>> = {
+  pendiente: "Pendiente de pedir a Aldo",
+  simulada: "Simulada (el POS no se tocó)",
+  insertada: "Back order en el POS",
+  omitida: "Sin partidas sobre pedido",
+  error: "Error al crear la back order",
+  cancelada: "Back order cancelada",
+};
+
+/**
+ * Sello de cada estado: insertada en verde de existencia (ya está pedida),
+ * simulada en azul del plano (una promesa, como "sobre pedido"), error y
+ * cancelada en rojo de anotación, lo demás en gris.
+ */
+const CLASE_SELLO_BKO_POS: Readonly<Record<string, string>> = {
+  pendiente: "sello text-tinta-suave",
+  simulada: "sello text-plano",
+  insertada: "sello text-existencia",
+  omitida: "sello text-tinta-suave",
+  error: "sello text-anotacion",
+  cancelada: "sello text-anotacion",
+};
+
+/** Texto del estado de la back order; uno desconocido sale tal cual, sin guiones. */
+export function etiquetaBkoPos(estado: string): string {
+  return ETIQUETA_BKO_POS[estado] ?? estado.replace(/_/g, " ");
+}
+
+/** Clases del sello del estado; uno desconocido va en gris. */
+export function claseSelloBkoPos(estado: string): string {
+  return CLASE_SELLO_BKO_POS[estado] ?? "sello text-tinta-suave";
 }

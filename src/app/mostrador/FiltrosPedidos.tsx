@@ -3,16 +3,22 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BUSQUEDA_MAX, USUARIO_MAX, urlCola, type FiltrosCola } from "@/lib/mostrador/filtros";
+import { USUARIO_MAX, urlCola, urlSinFiltros, type FiltrosBase } from "@/lib/mostrador/filtros";
 import { ETIQUETA_ESTATUS, ORDEN_ESTATUS, esCanalPedido, esEstatusPedido, esSucursal } from "@/lib/mostrador/reglas";
 import { ETIQUETA_CANAL } from "@/lib/mostrador/etiquetas";
 import { SUCURSALES_ENTREGA, type CanalPedido } from "@/lib/mostrador/tipos";
 
-// Filtros de la cola de pedidos (patrón PanelFiltros del catálogo): selects
-// nativos y campos de texto que al aplicar navegan a /mostrador con la
+// Filtros finos de la cola de pedidos (patrón PanelFiltros del catálogo):
+// selects nativos y campos que al aplicar navegan a /mostrador con la
 // selección en el querystring, para que la página de servidor vuelva a pedir
-// la cola a IA. Así la URL es compartible y el botón "atrás" funciona.
-// 16px de tipo como mínimo: en iOS un campo más chico hace zoom solo.
+// la cola a IA. Así la URL es compartible y el botón "atrás" funciona. Vive
+// dentro del panel plegable (`PanelFiltros`), que pone la lámina; por eso el
+// formulario no lleva fondo propio. La búsqueda por folio/cliente/teléfono NO
+// está aquí: es la `BusquedaRapida` siempre visible arriba; este formulario la
+// conserva tal cual (igual que el tamaño de página) al aplicar, para que
+// afinar por estatus o fechas no borre lo que se estaba buscando. Las fechas
+// llegan ya resueltas (las del mes en curso si la URL no traía): se ven y se
+// pueden mover. 16px de tipo como mínimo: en iOS un campo más chico hace zoom.
 
 const CLASE_CAMPO =
   "h-12 w-full rounded-md border border-linea bg-papel px-3 text-base text-tinta transition-colors duration-150 hover:border-linea-fuerte focus:border-tinta";
@@ -22,13 +28,12 @@ const CLASE_ETIQUETA =
 
 const CANALES: ReadonlyArray<CanalPedido> = ["mostrador", "whatsapp", "web"];
 
-export function FiltrosPedidos({ iniciales }: { iniciales: Omit<FiltrosCola, "pagina"> }) {
+export function FiltrosPedidos({ iniciales, hayFiltrosUrl }: { iniciales: FiltrosBase; hayFiltrosUrl: boolean }) {
   const router = useRouter();
   const [estatus, setEstatus] = useState(iniciales.estatus ?? "");
   const [sucursal, setSucursal] = useState(iniciales.sucursal ?? "");
   const [canal, setCanal] = useState(iniciales.canal ?? "");
   const [usuario, setUsuario] = useState(iniciales.usuario ?? "");
-  const [busqueda, setBusqueda] = useState(iniciales.busqueda ?? "");
   const [desde, setDesde] = useState(iniciales.desde ?? "");
   const [hasta, setHasta] = useState(iniciales.hasta ?? "");
   // useTransition en vez de un booleano propio: `aplicando` se apaga solo
@@ -40,40 +45,31 @@ export function FiltrosPedidos({ iniciales }: { iniciales: Omit<FiltrosCola, "pa
     evento.preventDefault();
     // Los selects solo pueden traer valores válidos, pero las guardas evitan
     // que un `""` viaje como filtro y mantienen el tipo estrecho sin casts.
-    const filtros: Omit<FiltrosCola, "pagina"> = {
+    const filtros: FiltrosBase = {
       ...(esEstatusPedido(estatus) ? { estatus } : {}),
       ...(esSucursal(sucursal) ? { sucursal } : {}),
       ...(esCanalPedido(canal) ? { canal } : {}),
       ...(usuario.trim() ? { usuario: usuario.trim() } : {}),
-      ...(busqueda.trim() ? { busqueda: busqueda.trim() } : {}),
       ...(desde ? { desde } : {}),
       ...(hasta ? { hasta } : {}),
+      ...(iniciales.busqueda ? { busqueda: iniciales.busqueda } : {}),
+      porPagina: iniciales.porPagina,
     };
     iniciarNavegacion(() => {
       router.push(urlCola(filtros));
     });
   }
 
-  const hayAlgo = Boolean(estatus || sucursal || canal || usuario.trim() || busqueda.trim() || desde || hasta);
+  // Las fechas no cuentan: llegan rellenas con el mes en curso aunque la URL
+  // venga limpia, y "Quitar filtros" no debe salir sin que haya nada que quitar.
+  const hayAlgo = hayFiltrosUrl || Boolean(estatus || sucursal || canal || usuario.trim());
 
   return (
     <form
       aria-label="Filtros de la cola de pedidos"
       onSubmit={aplicar}
-      className="lamina grid grid-cols-2 gap-3 p-4 md:grid-cols-4 xl:grid-cols-8"
+      className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6"
     >
-      <label className="col-span-2 block">
-        <span className={CLASE_ETIQUETA}>Buscar</span>
-        <input
-          type="search"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Folio, cliente o teléfono"
-          maxLength={BUSQUEDA_MAX}
-          className={CLASE_CAMPO}
-        />
-      </label>
-
       <label className="block">
         <span className={CLASE_ETIQUETA}>Estatus</span>
         <select value={estatus} onChange={(e) => setEstatus(e.target.value)} className={CLASE_CAMPO}>
@@ -133,7 +129,7 @@ export function FiltrosPedidos({ iniciales }: { iniciales: Omit<FiltrosCola, "pa
         <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className={CLASE_CAMPO} />
       </label>
 
-      <div className="col-span-2 flex items-end gap-3 md:col-span-4 xl:col-span-8">
+      <div className="col-span-2 flex items-end gap-3 md:col-span-3 xl:col-span-6">
         <button
           type="submit"
           disabled={aplicando}
@@ -143,7 +139,7 @@ export function FiltrosPedidos({ iniciales }: { iniciales: Omit<FiltrosCola, "pa
         </button>
         {hayAlgo && (
           <Link
-            href="/mostrador"
+            href={urlSinFiltros(iniciales)}
             className="inline-flex min-h-11 items-center text-[13px] font-semibold text-tinta-suave underline-offset-4 transition-colors duration-150 hover:text-tinta hover:underline"
           >
             Quitar filtros

@@ -9,11 +9,13 @@ import { svgCodigo128 } from "@/lib/mostrador/codigo128";
 import { hojaSurtido } from "@/lib/mostrador/datos";
 import { svgQr } from "@/lib/mostrador/qr";
 import { ETIQUETA_ORIGEN, fechaHora, telefonoLegible } from "@/lib/mostrador/etiquetas";
+import { primero } from "@/lib/mostrador/filtros";
 import { idDeRuta } from "@/lib/mostrador/reenvio";
 import { ETIQUETA_ESTATUS } from "@/lib/mostrador/reglas";
 import type { HojaSurtido, RenglonSurtido } from "@/lib/mostrador/tipos";
 import { RUTA_MOSTRADOR } from "@/lib/mostrador/volver";
 import { BotonImprimir } from "./BotonImprimir";
+import { ImpresionAutomatica } from "./ImpresionAutomatica";
 
 // Hoja de surtido: lo que se lleva el almacenista al anaquel. Va sin precios
 // a propósito (aquí se surte, no se cobra) y con la existencia releída por IA
@@ -21,6 +23,8 @@ import { BotonImprimir } from "./BotonImprimir";
 // barra del mostrador y los botones (`solo-pantalla`); lo demás es papel.
 // La cabecera lleva el folio como código de barras (lo lee el lector del POS)
 // y un QR con la liga al pedido (lo abre el almacenista desde el celular).
+// Con `?imprimir=1` (el botón "Imprimir orden" del detalle la abre así en
+// otra pestaña) el diálogo de impresión sale solo al cargar.
 
 export const metadata: Metadata = {
   title: "Hoja de surtido · Mostrador",
@@ -28,6 +32,12 @@ export const metadata: Metadata = {
 
 interface Contexto {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+/** `?imprimir=1` exacto; cualquier otra cosa se ignora. */
+function pideImpresion(sp: Record<string, string | string[] | undefined>): boolean {
+  return primero(sp.imprimir) === "1";
 }
 
 interface CargaHoja {
@@ -88,9 +98,20 @@ async function armarIdentificadores(pedido: HojaSurtido["pedido"]): Promise<Iden
   return { barras, qr, urlPedido };
 }
 
+/**
+ * El número con el que el mostrador ubica al cliente: el id del POS (bdav) si
+ * el padrón está ligado, si no el id del padrón; null para público general.
+ */
+function numeroCliente(pedido: HojaSurtido["pedido"]): { etiqueta: string; numero: number } | null {
+  if (typeof pedido.idClienteBdav === "number") return { etiqueta: "N° cliente POS", numero: pedido.idClienteBdav };
+  if (typeof pedido.idCliente === "number") return { etiqueta: "Padrón", numero: pedido.idCliente };
+  return null;
+}
+
 async function Encabezado({ hoja }: { hoja: HojaSurtido }) {
   const { pedido } = hoja;
   const folio = pedido.folio ?? `Borrador #${pedido.id}`;
+  const numero = numeroCliente(pedido);
   const { barras, qr, urlPedido } = await armarIdentificadores(pedido);
 
   // Los SVG entran con dangerouslySetInnerHTML SOLO porque el markup lo genera
@@ -108,6 +129,13 @@ async function Encabezado({ hoja }: { hoja: HojaSurtido }) {
             <span className="mx-2" aria-hidden>·</span>
             {ETIQUETA_ESTATUS[pedido.estatus]}
           </p>
+          {/* Solo cuando IA ya la levantó: el almacenista la cruza con el POS. */}
+          {typeof pedido.numCotizaPos === "number" && (
+            <p className="mt-1 text-sm">
+              <span className="rotulo-tecnico text-[11px] text-tinta-suave">Cotización POS</span>{" "}
+              <span className="num-tab font-mono font-semibold">{pedido.numCotizaPos}</span>
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-start justify-end gap-x-6 gap-y-3">
@@ -136,12 +164,24 @@ async function Encabezado({ hoja }: { hoja: HojaSurtido }) {
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
-        <div className="col-span-2">
+        {/* El cliente es lo primero que se lee en papel: va grande, con su
+            número del POS debajo para cruzarlo sin buscarlo. */}
+        <div className="col-span-2 sm:col-span-4">
           <dt className="rotulo-tecnico text-[11px] text-tinta-suave">Cliente</dt>
-          <dd className="font-semibold">
-            {pedido.cliente}
-            {pedido.telefono && (
-              <span className="num-tab ml-2 font-mono font-normal text-tinta-suave">{telefonoLegible(pedido.telefono)}</span>
+          <dd>
+            <p className="titulo-lamina text-2xl sm:text-3xl">{pedido.cliente}</p>
+            {(numero || pedido.telefono) && (
+              <p className="mt-1 flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                {numero && (
+                  <span>
+                    <span className="rotulo-tecnico text-[11px] text-tinta-suave">{numero.etiqueta}</span>{" "}
+                    <span className="num-tab font-mono text-lg font-bold">{numero.numero}</span>
+                  </span>
+                )}
+                {pedido.telefono && (
+                  <span className="num-tab font-mono text-sm text-tinta-suave">{telefonoLegible(pedido.telefono)}</span>
+                )}
+              </p>
             )}
           </dd>
         </div>
@@ -215,10 +255,11 @@ function TablaSurtido({ renglones }: { renglones: RenglonSurtido[] }) {
   );
 }
 
-export default async function PaginaSurtido({ params }: Contexto) {
-  const { id } = await params;
+export default async function PaginaSurtido({ params, searchParams }: Contexto) {
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
   const idPedido = idDeRuta(id);
   if (idPedido === null) notFound();
+  const imprimirAlCargar = pideImpresion(sp);
 
   const { hoja, error } = await cargarHoja(idPedido);
   if (error) {
@@ -238,6 +279,7 @@ export default async function PaginaSurtido({ params }: Contexto) {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-4">
+      {imprimirAlCargar && <ImpresionAutomatica />}
       <div className="solo-pantalla flex flex-wrap items-center justify-between gap-3">
         <Link
           href={rutaPedido}

@@ -117,11 +117,33 @@ function querystring(parametros: Record<string, string | number | undefined>): s
   return texto ? `?${texto}` : "";
 }
 
-/** Filtros de la cola tal como los manda la página; `porPagina` lo fija IA (50). */
-export type ConsultaPedidos = Partial<Omit<FiltrosPedidos, "porPagina">>;
+/**
+ * Filtros de la cola tal como los manda la página. `porPagina` viaja tal cual
+ * (un número 10..1000 o la palabra "todos"): IA lo acota y responde con el
+ * tamaño efectivo; sin él, IA usa 50.
+ */
+export type ConsultaPedidos = Partial<Omit<FiltrosPedidos, "porPagina">> & {
+  porPagina?: number | "todos";
+};
 
 export interface PaginaPedidosMostrador extends PaginaPedidos {
+  /** Tamaño de página EFECTIVO según IA (con "todos" es su tope, 1000). */
   porPagina: number;
+}
+
+/** Lo que IA aplica cuando no se le manda `porPagina`; también lo que se asume si no lo devuelve. */
+const POR_PAGINA_SUPUESTO = 50;
+
+/**
+ * `porPagina` que IA aplicó de verdad. Si no lo manda o no es un entero
+ * positivo (un motor viejo que ignora el parámetro), se asume 50 y se avisa
+ * en el log: la paginación sigue cuadrando en vez de tumbar la cola entera.
+ */
+function porPaginaEfectivo(datos: Objeto): number {
+  const valor = datos.porPagina;
+  if (typeof valor === "number" && Number.isInteger(valor) && valor > 0) return valor;
+  console.warn("[mostrador] IA no devolvió un porPagina válido; se asume", POR_PAGINA_SUPUESTO, valor);
+  return POR_PAGINA_SUPUESTO;
 }
 
 export async function listarPedidos(filtros: ConsultaPedidos = {}): Promise<PaginaPedidosMostrador> {
@@ -130,7 +152,7 @@ export async function listarPedidos(filtros: ConsultaPedidos = {}): Promise<Pagi
     pedidos: arreglo<PedidoResumen>(datos, "pedidos"),
     total: campo<number>(datos, "total"),
     porEstatus: campo<Record<EstatusPedido, number>>(datos, "porEstatus"),
-    porPagina: campo<number>(datos, "porPagina"),
+    porPagina: porPaginaEfectivo(datos),
   };
 }
 

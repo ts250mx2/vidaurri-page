@@ -21,8 +21,8 @@ import { PanelBorrador } from "./PanelBorrador";
 import { PanelCliente } from "./PanelCliente";
 
 // Orquestador de la captura: el borrador del servidor es la única verdad y
-// aquí vive su copia en pantalla. Cada acción (elegir cliente, agregar o
-// quitar partida, enviar) pega al proxy y sustituye el borrador completo con
+// aquí vive su copia en pantalla. Cada acción (elegir cliente, agregar,
+// cambiar cantidad o quitar partida, enviar) pega al proxy y sustituye el borrador completo con
 // el que IA devuelve; nada se calcula en el navegador. Los paneles reciben
 // callbacks que devuelven el mensaje de error (o null) y pintan el suyo.
 
@@ -40,6 +40,7 @@ const SUCURSAL_CASA: SucursalEntrega = "matriz";
 const CLIENTE_PUBLICO = "Público general";
 const ERROR_BORRADOR = "No fue posible abrir el borrador";
 const ERROR_PARTIDA = "No fue posible agregar la pieza";
+const ERROR_CANTIDAD = "No fue posible cambiar la cantidad";
 const ERROR_QUITAR = "No fue posible quitar la partida";
 const ERROR_ENVIAR = "No fue posible enviar el pedido";
 const ERROR_CANCELAR = "No fue posible cancelar el borrador";
@@ -142,6 +143,15 @@ export function NuevoPedido({ borradorInicial, perfil, vendedor, errorInicial }:
 
   function agregarPartida(codigo: string, cantidad: number): ResultadoAccion {
     return capturarPartida({ origen: "nueva", codigo, idPiezaUsada: null, cantidad });
+  }
+
+  /** PATCH /borrador/partidas/[id] con la cantidad nueva; IA recalcula importe y totales. */
+  async function cambiarCantidad(idPartida: number, cantidad: number): ResultadoAccion {
+    const respuesta = await llamarProxy(`/borrador/partidas/${idPartida}`, {
+      metodo: "PATCH",
+      cuerpo: { cantidad },
+    });
+    return tomarPedido(respuesta, ERROR_CANTIDAD);
   }
 
   async function quitarPartida(idPartida: number): ResultadoAccion {
@@ -261,6 +271,7 @@ export function NuevoPedido({ borradorInicial, perfil, vendedor, errorInicial }:
             ocupado={ocupado}
             clientePublico={CLIENTE_PUBLICO}
             onAgregar={agregarPartida}
+            onCantidad={cambiarCantidad}
             onQuitar={quitarPartida}
             onEnviar={enviarPedido}
             onCancelar={cancelarBorrador}

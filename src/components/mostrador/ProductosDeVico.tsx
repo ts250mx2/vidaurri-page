@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Minus, Plus } from "lucide-react";
 import clsx from "clsx";
 import { CLASE_BOTON_PLANO, CLASE_ERROR } from "@/components/mostrador/estilos";
+import { CANTIDAD_MIN, Stepper, acotarCantidad } from "@/components/mostrador/Stepper";
 import { pesos } from "@/lib/formato";
 import type { CapturaPartida, ProductoMencionado } from "@/lib/mostrador/tipos";
 
@@ -30,8 +30,6 @@ type EstadoRenglon =
   | { fase: "agregado" }
   | { fase: "error"; texto: string };
 
-const CANTIDAD_MIN = 1;
-const CANTIDAD_MAX = 99;
 /** Lo que dura el "Agregado ✓" antes de volver a ofrecer el botón. */
 const MOSTRAR_AGREGADO_MS = 2000;
 const TEXTO_AGREGAR = "Agregar al pedido";
@@ -43,12 +41,6 @@ const TEXTO_PIEZA_UNICA = "Pieza única";
 /** Una nueva y una usada pueden compartir código: la llave lleva el origen. */
 function claveDe(p: ProductoMencionado): string {
   return `${p.origen}:${p.idPiezaUsada ?? p.codigo}`;
-}
-
-/** Cantidad acotada a [1, 99]; lo que no sea número cuenta como 1. */
-function acotarCantidad(cruda: number): number {
-  if (!Number.isFinite(cruda)) return CANTIDAD_MIN;
-  return Math.min(CANTIDAD_MAX, Math.max(CANTIDAD_MIN, Math.trunc(cruda)));
 }
 
 /**
@@ -90,57 +82,6 @@ function Existencia({ producto }: { producto: ProductoMencionado }) {
       {TEXTO_SIN_EXISTENCIA}
       {producto.sobrePedido === true ? " · sobre pedido" : ""}
     </span>
-  );
-}
-
-const CLASE_PASO =
-  "flex size-11 items-center justify-center text-tinta transition-colors duration-150 hover:bg-papel disabled:cursor-not-allowed disabled:opacity-40";
-
-interface PropsStepper {
-  codigo: string;
-  cantidad: number;
-  bloqueado: boolean;
-  onCambiar: (cantidad: number) => void;
-}
-
-/** Botones de 44 px y campo ≥16px: se opera con el pulgar en la tablet del mostrador. */
-function Stepper({ codigo, cantidad, bloqueado, onCambiar }: PropsStepper) {
-  return (
-    <div
-      role="group"
-      aria-label={`Cantidad de ${codigo}`}
-      className="flex shrink-0 items-center rounded-md border border-linea bg-hoja"
-    >
-      <button
-        type="button"
-        onClick={() => onCambiar(cantidad - 1)}
-        disabled={bloqueado || cantidad <= CANTIDAD_MIN}
-        aria-label="Una pieza menos"
-        className={CLASE_PASO}
-      >
-        <Minus aria-hidden className="size-4" />
-      </button>
-      <input
-        type="number"
-        inputMode="numeric"
-        min={CANTIDAD_MIN}
-        max={CANTIDAD_MAX}
-        value={cantidad}
-        onChange={(e) => onCambiar(Number.parseInt(e.target.value, 10))}
-        disabled={bloqueado}
-        aria-label={`Cantidad de ${codigo}`}
-        className="num-tab h-11 w-12 border-x border-linea bg-hoja text-center font-mono text-base text-tinta outline-none focus:border-tinta disabled:opacity-60"
-      />
-      <button
-        type="button"
-        onClick={() => onCambiar(cantidad + 1)}
-        disabled={bloqueado || cantidad >= CANTIDAD_MAX}
-        aria-label="Una pieza más"
-        className={CLASE_PASO}
-      >
-        <Plus aria-hidden className="size-4" />
-      </button>
-    </div>
   );
 }
 
@@ -231,7 +172,7 @@ export function ProductosDeVico({ productos, ocupado = false, onAgregar }: Props
                 <span className="num-tab shrink-0 font-mono text-xs text-tinta-suave">1 pieza</span>
               ) : (
                 <Stepper
-                  codigo={p.codigo}
+                  etiqueta={`Cantidad de ${p.codigo}`}
                   cantidad={cantidades[clave] ?? CANTIDAD_MIN}
                   bloqueado={bloqueado}
                   onCambiar={(siguiente) => cambiarCantidad(clave, siguiente)}

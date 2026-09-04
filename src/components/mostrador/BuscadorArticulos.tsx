@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import clsx from "clsx";
 import { CLASE_BOTON_PLANO, CLASE_CAMPO, CLASE_ERROR, CLASE_ETIQUETA } from "@/components/mostrador/estilos";
+import { CANTIDAD_MIN, Stepper } from "@/components/mostrador/Stepper";
 import { pesos } from "@/lib/formato";
 import {
   arregloDe,
@@ -12,45 +14,62 @@ import {
   STATUS_ABORTADA,
 } from "@/lib/mostrador/navegador";
 import type { ArticuloParaPedido } from "@/lib/mostrador/tipos";
-import type { ResultadoAccion } from "./NuevoPedido";
 
-// Buscador manual de artículos de bdav para agregar al borrador sin pasar por
-// Vico: por código o descripción, con el precio que IA calcula para el
-// cliente elegido (por eso `idCliente` va en la consulta y en las deps: al
+// Buscador manual de artículos de bdav (`GET /api/mostrador/articulos`) para
+// meter piezas a un pedido sin pasar por Vico. Lo comparten el borrador del
+// nuevo pedido ("Agregar sin Vico") y la edición del detalle ("Agregar
+// pieza"): por código o descripción, con el precio que IA calcula para el
+// cliente del pedido (por eso `idCliente` va en la consulta y en las deps: al
 // cambiar de cliente, los precios de la lista cambian). La cantidad se captura
-// por renglón; el precio nunca sale del navegador.
+// por renglón con el stepper; el precio nunca sale del navegador. `onAgregar`
+// devuelve el texto del error o null: si salió bien el botón dice "Agregado ✓"
+// 2 s, si no, el error se pinta aquí mismo. El botón va en plano, nunca en
+// ámbar: el ámbar es de la acción que cierra el pedido.
 
-interface PropsAgregarSinVico {
+export type AgregarArticulo = (codigo: string, cantidad: number) => Promise<string | null>;
+
+interface PropsBuscadorArticulos {
+  /** Rótulo del bloque: "Agregar sin Vico" en el borrador, "Agregar pieza" en el detalle. */
+  titulo: string;
+  ayuda: string;
   idCliente: number | null;
+  /** El padre está a media acción: se espera antes de agregar. */
   ocupado: boolean;
-  onAgregar: (codigo: string, cantidad: number) => ResultadoAccion;
+  onAgregar: AgregarArticulo;
 }
 
 const DEBOUNCE_MS = 300;
 const MIN_BUSQUEDA = 2;
 const BUSQUEDA_MAX = 80;
-const CANTIDAD_MIN = 1;
-const CANTIDAD_MAX = 99;
+/** Lo que dura el "Agregado ✓" antes de volver a ofrecer el botón. */
+const MOSTRAR_AGREGADO_MS = 2000;
 const ERROR_BUSQUEDA = "No fue posible buscar en el catálogo";
+const TEXTO_AGREGAR = "Agregar";
+const TEXTO_AGREGANDO = "Agregando…";
+const TEXTO_AGREGADO = "Agregado ✓";
 
-/** Cantidad tecleada acotada a [1, 99]; lo que no sea número cuenta como 1. */
-function leerCantidad(crudo: string): number {
-  const numero = Number.parseInt(crudo, 10);
-  if (!Number.isFinite(numero)) return CANTIDAD_MIN;
-  return Math.min(CANTIDAD_MAX, Math.max(CANTIDAD_MIN, numero));
-}
-
-export function AgregarSinVico({ idCliente, ocupado, onAgregar }: PropsAgregarSinVico) {
+export function BuscadorArticulos({ titulo, ayuda, idCliente, ocupado, onAgregar }: PropsBuscadorArticulos) {
   const [busqueda, setBusqueda] = useState("");
   const [resultados, setResultados] = useState<ArticuloParaPedido[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [agregando, setAgregando] = useState<string | null>(null);
+  const [agregado, setAgregado] = useState<string | null>(null);
+  // El "Agregado ✓" se apaga solo; si el bloque se desmonta antes, se limpia.
+  const temporizadores = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   const textoBusqueda = busqueda.trim().slice(0, BUSQUEDA_MAX);
   const busquedaActiva = textoBusqueda.length >= MIN_BUSQUEDA;
 
+  useEffect(() => {
+    const pendientes = temporizadores.current;
+    return () => pendientes.forEach(clearTimeout);
+  }, []);
+
+  // Debounce de 300 ms y aborto de la búsqueda anterior: al teclear rápido
+  // solo llega a bdav la última, y una respuesta tardía nunca pisa a una más
+  // nueva. El estado se toca dentro del temporizador, no en el efecto.
   useEffect(() => {
     if (!busquedaActiva) return;
     const control = new AbortController();
@@ -75,20 +94,41 @@ export function AgregarSinVico({ idCliente, ocupado, onAgregar }: PropsAgregarSi
     };
   }, [busquedaActiva, textoBusqueda, idCliente]);
 
+  function cambiarCantidad(codigo: string, cantidad: number) {
+    setCantidades((previas) => ({ ...previas, [codigo]: cantidad }));
+  }
+
   async function agregar(codigo: string) {
     if (agregando) return;
     setAgregando(codigo);
     setError(null);
     const fallo = await onAgregar(codigo, cantidades[codigo] ?? CANTIDAD_MIN);
     setAgregando(null);
-    if (fallo) setError(fallo);
+    if (fallo) {
+      setError(fallo);
+      return;
+    }
+    setAgregado(codigo);
+    const temporizador = setTimeout(() => {
+      temporizadores.current.delete(temporizador);
+      setAgregado((actual) => (actual === codigo ? null : actual));
+    }, MOSTRAR_AGREGADO_MS);
+    temporizadores.current.add(temporizador);
   }
+
+  function textoDelBoton(codigo: string): string {
+    if (agregando === codigo) return TEXTO_AGREGANDO;
+    if (agregado === codigo) return TEXTO_AGREGADO;
+    return TEXTO_AGREGAR;
+  }
+
+  const bloqueado = ocupado || agregando !== null;
 
   return (
     <div className="lamina flex flex-col gap-3 p-4">
       <div>
-        <p className={CLASE_ETIQUETA}>Agregar sin Vico</p>
-        <p className="mt-1 text-xs text-tinta-suave">Por código o descripción; el precio ya trae el descuento del cliente.</p>
+        <p className={CLASE_ETIQUETA}>{titulo}</p>
+        <p className="mt-1 text-xs text-tinta-suave">{ayuda}</p>
       </div>
       <input
         type="search"
@@ -117,6 +157,7 @@ export function AgregarSinVico({ idCliente, ocupado, onAgregar }: PropsAgregarSi
           )}
           {resultados.map((a) => {
             const hayExistencia = a.existencia > 0;
+            const recienAgregado = agregado === a.codigo;
             return (
               <li key={a.codigo} className="flex flex-col gap-2 px-3 py-2.5">
                 <div className="min-w-0">
@@ -130,25 +171,23 @@ export function AgregarSinVico({ idCliente, ocupado, onAgregar }: PropsAgregarSi
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={CANTIDAD_MIN}
-                    max={CANTIDAD_MAX}
-                    value={cantidades[a.codigo] ?? CANTIDAD_MIN}
-                    onChange={(e) =>
-                      setCantidades({ ...cantidades, [a.codigo]: leerCantidad(e.target.value) })
-                    }
-                    aria-label={`Cantidad de ${a.codigo}`}
-                    className={`${CLASE_CAMPO} num-tab w-20 font-mono`}
+                  <Stepper
+                    etiqueta={`Cantidad de ${a.codigo}`}
+                    cantidad={cantidades[a.codigo] ?? CANTIDAD_MIN}
+                    bloqueado={bloqueado}
+                    onCambiar={(cantidad) => cambiarCantidad(a.codigo, cantidad)}
                   />
                   <button
                     type="button"
                     onClick={() => void agregar(a.codigo)}
-                    disabled={ocupado || agregando !== null}
-                    className={`${CLASE_BOTON_PLANO} flex-1`}
+                    disabled={bloqueado || recienAgregado}
+                    className={clsx(
+                      CLASE_BOTON_PLANO,
+                      "h-11 flex-1",
+                      recienAgregado && "bg-existencia hover:bg-existencia disabled:opacity-100"
+                    )}
                   >
-                    {agregando === a.codigo ? "Agregando…" : "Agregar"}
+                    {textoDelBoton(a.codigo)}
                   </button>
                 </div>
               </li>

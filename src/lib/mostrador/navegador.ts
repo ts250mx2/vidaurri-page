@@ -7,7 +7,7 @@ import type { PedidoDetalle } from "./tipos";
 // try/catch. No importa nada de servidor (ni `api.ts`, que lee variables de
 // entorno): este archivo se empaqueta para el navegador.
 
-export type MetodoNavegador = "GET" | "POST" | "DELETE";
+export type MetodoNavegador = "GET" | "POST" | "PATCH" | "DELETE";
 export type Objeto = Record<string, unknown>;
 
 export interface RespuestaProxy {

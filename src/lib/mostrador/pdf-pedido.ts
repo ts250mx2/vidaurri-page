@@ -234,8 +234,15 @@ interface Campo {
 function camposDelPedido(hoja: HojaSurtido): Campo[] {
   const { pedido } = hoja;
   const telefono = telefonoLegible(pedido.telefono);
+  // El número con el que el mostrador ubica al cliente (POS si está ligado, si no el padrón).
+  const numeroCliente =
+    typeof pedido.idClienteBdav === "number"
+      ? `Cliente POS ${pedido.idClienteBdav}`
+      : typeof pedido.idCliente === "number"
+        ? `Padrón #${pedido.idCliente}`
+        : "";
   const campos: Campo[] = [
-    { etiqueta: "Cliente", valor: telefono ? `${pedido.cliente}  ${telefono}` : pedido.cliente, columnas: 2 },
+    { etiqueta: "Cliente", valor: [pedido.cliente, numeroCliente, telefono].filter(Boolean).join("  "), columnas: 2 },
     {
       etiqueta: "Recoge en",
       valor: hoja.sucursal.nombre,

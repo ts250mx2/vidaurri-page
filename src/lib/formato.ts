@@ -10,7 +10,7 @@ export function pesos(monto: number): string {
   });
 }
 
-const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+export const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
 /** Fecha corta al estilo del mostrador: "2026-08-05" → "05-ago-2026".
  *  Devuelve "" si la fecha no viene o no es válida (fecha_alta en cero). */

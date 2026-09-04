@@ -64,6 +64,20 @@ export function puedeCancelarCliente(estatus: EstatusPedido): boolean {
   return estatus === "borrador" || estatus === "enviado";
 }
 
+/**
+ * Un pedido se puede editar (partidas, cantidades, sucursal, observaciones)
+ * mientras el mostrador no lo haya surtido: borrador, enviado y confirmado sí;
+ * listo, entregado y cancelado ya no. Cualquier perfil del POS puede hacerlo;
+ * IA responde 409 si esta copia se desfasó.
+ */
+export function puedeEditarPedido(estatus: EstatusPedido): boolean {
+  return estatus === "borrador" || estatus === "enviado" || estatus === "confirmado";
+}
+
+/** Topes de captura (mismos valores que IA); aquí solo acotan en pantalla antes de viajar. */
+export const CANTIDAD_MAX = 99;
+export const OBSERVACIONES_MAX = 500;
+
 /** Orden natural del flujo, para pintar botones y conteos siempre igual. */
 export const ORDEN_ESTATUS: ReadonlyArray<EstatusPedido> = [
   "borrador",

@@ -3,9 +3,10 @@ import { pesos } from "@/lib/formato";
 import { CLASE_SELLO_PARTIDA, ETIQUETA_ESTATUS_PARTIDA, ETIQUETA_ORIGEN } from "@/lib/mostrador/etiquetas";
 import type { PartidaPedido } from "@/lib/mostrador/tipos";
 
-// Partidas del pedido en solo lectura (pedidos listos, entregados, cancelados
-// o borradores). La versión con confirmación por renglón es
-// `ConfirmacionPartidas` (cliente); esta no lleva JavaScript.
+// Partidas del pedido en solo lectura (pedidos listos, entregados o
+// cancelados: ya no se editan). Mientras el pedido es editable la tabla la
+// pinta `EdicionPartidas` (EdicionPedido.tsx) y la confirmación por renglón
+// `ConfirmacionPartidas`, ambas de cliente; esta no lleva JavaScript.
 
 export const CLASE_TH_PARTIDA =
   "whitespace-nowrap px-3 py-2.5 text-left font-display text-[11px] font-bold uppercase tracking-[0.12em] text-tinta-suave";

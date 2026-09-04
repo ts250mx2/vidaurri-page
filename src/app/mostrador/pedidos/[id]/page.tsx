@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect, unstable_rethrow } from "next/navigation";
 import { ChevronLeft, FileDown, Printer } from "lucide-react";
 import clsx from "clsx";
+import { CancelarPedido } from "@/components/mostrador/CancelarPedido";
 import { pesos } from "@/lib/formato";
 import { obtenerPedido } from "@/lib/mostrador/datos";
 import {
@@ -10,22 +11,39 @@ import {
   ETIQUETA_SUCURSAL,
   etiquetaEvento,
   fechaHora,
+  motivoNoEditable,
   telefonoLegible,
 } from "@/lib/mostrador/etiquetas";
 import { idDeRuta } from "@/lib/mostrador/reenvio";
-import { CLASE_SELLO_ESTATUS, ETIQUETA_ESTATUS } from "@/lib/mostrador/reglas";
+import {
+  CLASE_SELLO_ESTATUS,
+  ETIQUETA_ESTATUS,
+  puedeCambiarEstatus,
+  puedeEditarPedido,
+} from "@/lib/mostrador/reglas";
 import { sesionMostrador } from "@/lib/mostrador/sesion";
 import type { EventoPedido, PedidoDetalle } from "@/lib/mostrador/tipos";
 import { RUTA_LOGIN_MOSTRADOR, RUTA_MOSTRADOR } from "@/lib/mostrador/volver";
 import { AccionesPedido } from "./AccionesPedido";
 import { ConfirmacionPartidas } from "./ConfirmacionPartidas";
+import { CotizacionPos } from "./CotizacionPos";
+import { EdicionObservaciones, EdicionPartidas, EdicionSucursal } from "./EdicionPedido";
 import { TablaPartidas } from "./TablaPartidas";
 
-// Detalle de un pedido para el vendedor: cabecera con folio y estatus,
-// partidas (editables por renglón mientras está enviado o confirmado),
-// totales con IVA incluido, observaciones, botones de estatus según el perfil
-// de la sesión y la bitácora al pie. El perfil viaja como prop desde el
-// servidor; la verdad sobre lo que se puede hacer la impone IA.
+// Detalle de un pedido para el vendedor. Arriba, la barra de acciones: volver
+// a la cola, imprimir la orden (abre la hoja de surtido en otra pestaña y
+// lanza el diálogo de impresión), descargar el PDF y, si el perfil puede, el
+// bote de cancelar con su diálogo (la misma isla que en la cola). Debajo, la
+// cabecera con folio, estatus y datos (incluida la cotización espejo en el
+// POS), partidas, totales con IVA incluido, observaciones, los botones de
+// avance de estatus según el perfil (ámbar solo en "Confirmar pedido") y la
+// bitácora al pie. Mientras `puedeEditarPedido` (borrador, enviado,
+// confirmado) las partidas, la sucursal y las observaciones se editan en las
+// islas de `EdicionPedido`; en enviado y confirmado además el mostrador
+// confirma la existencia renglón por renglón (`ConfirmacionPartidas`). Ya
+// surtido, todo queda en solo lectura con el motivo a la vista. El perfil
+// viaja como prop desde el servidor; la verdad sobre lo que se puede hacer la
+// impone IA.
 
 export const metadata: Metadata = {
   title: "Pedido · Mostrador",
@@ -55,6 +73,9 @@ async function cargarPedido(id: number): Promise<CargaPedido> {
 function admiteConfirmacion(pedido: PedidoDetalle): boolean {
   return pedido.estatus === "enviado" || pedido.estatus === "confirmado";
 }
+
+const CLASE_BOTON_BARRA =
+  "rotulo-tecnico inline-flex h-12 items-center gap-2 rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta";
 
 function Dato({ etiqueta, children, className }: { etiqueta: string; children: React.ReactNode; className?: string }) {
   return (
@@ -159,48 +180,57 @@ export default async function PaginaPedido({ params }: Contexto) {
   if (!pedido) notFound();
 
   const folio = pedido.folio ?? `Borrador #${pedido.id}`;
+  const rutaPedido = `${RUTA_MOSTRADOR}/pedidos/${pedido.id}`;
   const conSurtido = pedido.estatus !== "borrador" && pedido.estatus !== "cancelado";
+  const editable = puedeEditarPedido(pedido.estatus);
+  const motivoBloqueo = motivoNoEditable(pedido.estatus);
+  const puedeCancelar = puedeCambiarEstatus(sesion.perfil, pedido.estatus, "cancelado");
+  // Campos nuevos del contrato (B5): mientras IA no los mande, la sección no se pinta.
+  const conCotizaPos = pedido.cotizaPosEstado !== undefined;
 
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        href={RUTA_MOSTRADOR}
-        className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-semibold text-tinta-suave transition-colors duration-150 hover:text-tinta"
-      >
-        <ChevronLeft aria-hidden className="size-4" />
-        Pedidos
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href={RUTA_MOSTRADOR}
+          className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-semibold text-tinta-suave transition-colors duration-150 hover:text-tinta"
+        >
+          <ChevronLeft aria-hidden className="size-4" />
+          Pedidos
+        </Link>
+        {(conSurtido || puedeCancelar) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {conSurtido && (
+              <>
+                {/* La hoja de surtido con `?imprimir=1` lanza window.print() al cargar. */}
+                <a
+                  href={`${rutaPedido}/surtido?imprimir=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={CLASE_BOTON_BARRA}
+                >
+                  <Printer aria-hidden className="size-4" />
+                  Imprimir orden
+                </a>
+                {/* La hoja en PDF la sirve /pdf (misma cabecera con código de barras y QR). */}
+                <a href={`${rutaPedido}/pdf`} target="_blank" rel="noopener noreferrer" className={CLASE_BOTON_BARRA}>
+                  <FileDown aria-hidden className="size-4" />
+                  Descargar PDF
+                </a>
+              </>
+            )}
+            {puedeCancelar && <CancelarPedido idPedido={pedido.id} folio={folio} />}
+          </div>
+        )}
+      </div>
 
       <header className="lamina p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="rotulo-tecnico text-xs text-tinta-suave">Pedido · {ETIQUETA_CANAL[pedido.canal]}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-3">
-              <h1 className="titulo-lamina num-tab text-4xl sm:text-5xl">{folio}</h1>
-              <span className={CLASE_SELLO_ESTATUS[pedido.estatus]}>{ETIQUETA_ESTATUS[pedido.estatus]}</span>
-            </div>
+        <div>
+          <p className="rotulo-tecnico text-xs text-tinta-suave">Pedido · {ETIQUETA_CANAL[pedido.canal]}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <h1 className="titulo-lamina num-tab text-4xl sm:text-5xl">{folio}</h1>
+            <span className={CLASE_SELLO_ESTATUS[pedido.estatus]}>{ETIQUETA_ESTATUS[pedido.estatus]}</span>
           </div>
-          {conSurtido && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href={`${RUTA_MOSTRADOR}/pedidos/${pedido.id}/surtido`}
-                className="rotulo-tecnico inline-flex h-12 items-center gap-2 rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta"
-              >
-                <Printer aria-hidden className="size-4" />
-                Hoja de surtido
-              </Link>
-              {/* La hoja en PDF la sirve /pdf (misma cabecera con código de barras y QR). */}
-              <a
-                href={`${RUTA_MOSTRADOR}/pedidos/${pedido.id}/pdf`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rotulo-tecnico inline-flex h-12 items-center gap-2 rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta"
-              >
-                <FileDown aria-hidden className="size-4" />
-                Descargar PDF
-              </a>
-            </div>
-          )}
         </div>
 
         <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-linea pt-5 sm:grid-cols-3 lg:grid-cols-6">
@@ -214,13 +244,30 @@ export default async function PaginaPedido({ params }: Contexto) {
           <Dato etiqueta="Teléfono">
             <span className="num-tab font-mono">{telefonoLegible(pedido.telefono) || "—"}</span>
           </Dato>
-          <Dato etiqueta="Recoge en">{ETIQUETA_SUCURSAL[pedido.sucursal]}</Dato>
+          <Dato etiqueta="Recoge en">
+            {editable ? (
+              <EdicionSucursal idPedido={pedido.id} sucursal={pedido.sucursal} />
+            ) : (
+              ETIQUETA_SUCURSAL[pedido.sucursal]
+            )}
+          </Dato>
           <Dato etiqueta="Capturó">
             <span className="font-mono">{pedido.capturadoPor ?? "cliente"}</span>
           </Dato>
           <Dato etiqueta="Atendió">
             <span className="font-mono">{pedido.atendidoPor ?? "—"}</span>
           </Dato>
+          {conCotizaPos && (
+            <Dato etiqueta="Cotización POS" className="col-span-2">
+              <CotizacionPos
+                idPedido={pedido.id}
+                estatus={pedido.estatus}
+                numCotizaPos={pedido.numCotizaPos ?? null}
+                estado={pedido.cotizaPosEstado ?? "pendiente"}
+                errorPos={pedido.cotizaPosError ?? null}
+              />
+            </Dato>
+          )}
         </dl>
 
         <div className="mt-4 border-t border-linea pt-4">
@@ -246,27 +293,53 @@ export default async function PaginaPedido({ params }: Contexto) {
           <h2 id="partidas" className="titulo-lamina text-2xl">
             Partidas
           </h2>
-          {admiteConfirmacion(pedido) && (
-            <p className="text-sm text-tinta-suave">Anota qué encontraste de cada pieza y guarda la confirmación.</p>
+          {editable ? (
+            <p className="text-sm text-tinta-suave">
+              Cambia cantidades, quita piezas o agrega otras; los totales los recalcula el servidor.
+            </p>
+          ) : (
+            motivoBloqueo && <p className="text-sm text-tinta-suave">{motivoBloqueo}</p>
           )}
         </div>
-        {pedido.partidas.length === 0 ? (
+        {editable ? (
+          <EdicionPartidas
+            idPedido={pedido.id}
+            idCliente={pedido.idCliente}
+            confirmado={pedido.estatus === "confirmado"}
+            partidas={pedido.partidas}
+          />
+        ) : pedido.partidas.length === 0 ? (
           <div className="lamina px-5 py-8 text-center text-sm text-tinta-suave">Este pedido no tiene partidas.</div>
-        ) : admiteConfirmacion(pedido) ? (
-          <ConfirmacionPartidas key={pedido.actualizadoEn} idPedido={pedido.id} partidas={pedido.partidas} />
         ) : (
           <TablaPartidas partidas={pedido.partidas} />
         )}
       </section>
+
+      {admiteConfirmacion(pedido) && pedido.partidas.length > 0 && (
+        <section aria-labelledby="confirmacion" className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="confirmacion" className="titulo-lamina text-2xl">
+              Existencia por renglón
+            </h2>
+            <p className="text-sm text-tinta-suave">Anota qué encontraste de cada pieza y guarda la confirmación.</p>
+          </div>
+          {/* Con llave por actualizadoEn: tras cualquier edición vuelve a arrancar con lo que IA dejó. */}
+          <ConfirmacionPartidas key={pedido.actualizadoEn} idPedido={pedido.id} partidas={pedido.partidas} />
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <section aria-labelledby="observaciones" className="flex flex-col gap-3">
           <h2 id="observaciones" className="titulo-lamina text-2xl">
             Observaciones
           </h2>
-          <p className={clsx("lamina px-4 py-3 text-sm", !pedido.observaciones && "text-tinta-suave")}>
-            {pedido.observaciones ?? "Sin observaciones."}
-          </p>
+          {editable ? (
+            <EdicionObservaciones idPedido={pedido.id} observaciones={pedido.observaciones} />
+          ) : (
+            <p className={clsx("lamina px-4 py-3 text-sm", !pedido.observaciones && "text-tinta-suave")}>
+              {pedido.observaciones ?? "Sin observaciones."}
+            </p>
+          )}
         </section>
         <section aria-label="Totales" className="flex flex-col gap-3">
           <h2 className="titulo-lamina text-2xl">Totales</h2>

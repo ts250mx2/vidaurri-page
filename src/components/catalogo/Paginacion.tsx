@@ -19,8 +19,12 @@ const CLASE_NUM_ACTUAL = `${CLASE_BASE} num-tab min-w-11 border-tinta bg-plano p
 const CLASE_NAV = `${CLASE_BASE} ${CLASE_TONO} rotulo-tecnico px-3.5 text-[13px]`;
 const CLASE_NAV_INACTIVO = `${CLASE_BASE} rotulo-tecnico border-linea bg-hoja px-3.5 text-[13px] text-tinta-suave opacity-50`;
 
-/** Ventana de números con elipsis: 1 … n-1 [n] n+1 … total. */
-function paginasVisibles(actual: number, total: number): Array<number | "salto"> {
+/**
+ * Ventana de números con elipsis: 1 … n-1 [n] n+1 … total. Exportada porque
+ * el pie de la cola del mostrador pagina con la misma ventana en versión
+ * compacta (solo flechas y números).
+ */
+export function paginasVisibles(actual: number, total: number): Array<number | "salto"> {
   const numeros: number[] = [];
   for (let p = 1; p <= total; p++) {
     if (p === 1 || p === total || Math.abs(p - actual) <= 1) numeros.push(p);

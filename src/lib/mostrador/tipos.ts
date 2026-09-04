@@ -65,6 +65,8 @@ export interface PedidoResumen {
   canal: CanalPedido;
   /** clientes_descuento.id; null = público general. */
   idCliente: number | null;
+  /** clientes.id en bdav (el ID que ve el POS) si el cliente del padrón está ligado; null si no. */
+  idClienteBdav: number | null;
   /** Nombre del cliente al momento del pedido (snapshot). */
   cliente: string;
   telefono: string | null;
@@ -85,6 +87,16 @@ export interface PedidoResumen {
   entregadoEn: string | null;
   canceladoEn: string | null;
   actualizadoEn: string;
+  /**
+   * Cotización espejo en el POS (bdav.cotiza), la levanta IA al marcar el
+   * pedido listo (contrato B4/B5). Opcionales mientras IA termina de
+   * mandarlas: si faltan, la pantalla no pinta la sección, no la rompe.
+   */
+  numCotizaPos?: number | null;
+  /** pendiente | simulada | insertada | omitida | error | cancelada */
+  cotizaPosEstado?: string;
+  /** Texto del último fallo (≤200) cuando `cotizaPosEstado` es "error". */
+  cotizaPosError?: string | null;
 }
 
 export interface PedidoDetalle extends PedidoResumen {

@@ -22,4 +22,8 @@ export const CLASE_BOTON_PLANO =
 export const CLASE_BOTON_SECUNDARIO =
   "rotulo-tecnico inline-flex h-10 items-center justify-center rounded-md border border-linea-fuerte bg-hoja px-3 text-xs text-tinta transition-colors duration-150 hover:border-tinta disabled:cursor-not-allowed disabled:opacity-60";
 
+/** Acción que deshace (quitar una pieza): contorno rojo de anotación que se llena al pasar. */
+export const CLASE_BOTON_PELIGRO =
+  "rotulo-tecnico inline-flex h-10 items-center justify-center rounded-md border border-anotacion bg-hoja px-3 text-xs text-anotacion transition-colors duration-150 hover:bg-anotacion hover:text-white disabled:cursor-not-allowed disabled:opacity-60";
+
 export const CLASE_ERROR = "text-sm font-medium text-anotacion";

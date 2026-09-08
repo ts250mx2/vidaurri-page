@@ -116,6 +116,17 @@ function CeldaPedido({ pedido, detalle, folio }: { pedido: PedidoResumen; detall
       <p className="num-tab mt-0.5 truncate text-xs text-tinta-suave" title={creado || undefined}>
         {fechaHoraCorta(pedido.creadoEn) || "—"}
       </p>
+      {/* El número con el que se busca el pedido en el POS. Va bajo el folio
+          porque son los dos identificadores de lo mismo, y así no hay que
+          abrirlo para dictárselo al cliente. Solo aparece una vez emitida. */}
+      {typeof pedido.numCotizaPos === "number" && (
+        <p
+          className="num-tab mt-0.5 truncate font-mono text-xs text-tinta-suave"
+          title={`Cotización ${pedido.numCotizaPos} en el POS`}
+        >
+          Cot. {pedido.numCotizaPos}
+        </p>
+      )}
     </td>
   );
 }

@@ -254,6 +254,12 @@ function camposDelPedido(hoja: HojaSurtido): Campo[] {
     { etiqueta: "Pedido", valor: fechaHora(pedido.enviadoEn ?? pedido.creadoEn) || "—", mono: true },
     { etiqueta: "Hoja generada", valor: fechaHora(hoja.generadoEn) || "—", mono: true },
   ];
+  // El número con el que se cobra este pedido en el POS. Solo existe una vez
+  // emitida la cotización (IA la levanta al confirmar), y en esta hoja pesa
+  // más que las fechas: es lo que se teclea en el punto de venta.
+  if (typeof pedido.numCotizaPos === "number") {
+    campos.push({ etiqueta: "Cotización POS", valor: String(pedido.numCotizaPos), mono: true });
+  }
   // Las fechas de avance solo cuando existen: una ficha llena de guiones no dice nada.
   if (pedido.confirmadoEn) campos.push({ etiqueta: "Confirmado", valor: fechaHora(pedido.confirmadoEn), mono: true });
   if (pedido.listoEn) campos.push({ etiqueta: "Listo en sucursal", valor: fechaHora(pedido.listoEn), mono: true });

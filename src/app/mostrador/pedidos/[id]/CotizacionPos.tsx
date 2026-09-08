@@ -11,8 +11,8 @@ import type { EstatusPedido } from "@/lib/mostrador/tipos";
 
 // Cotización espejo del pedido en el POS (contrato B4): el número cuando ya
 // se levantó, el estado cuando no, y el botón para volver a intentarlo
-// cuando falló o quedó pendiente. IA solo acepta el reintento con el pedido
-// listo o entregado; en cualquier otro estatus el botón ni se pinta.
+// cuando falló o quedó pendiente. IA solo acepta el reintento desde que el
+// pedido está confirmado; en cualquier estatus anterior el botón ni se pinta.
 
 const ERROR_GENERICO = "No fue posible cotizar en el POS; intenta de nuevo";
 
@@ -25,7 +25,7 @@ interface Props {
 }
 
 function admiteReintento(estatus: EstatusPedido): boolean {
-  return estatus === "listo" || estatus === "entregado";
+  return estatus === "confirmado" || estatus === "listo" || estatus === "entregado";
 }
 
 export function CotizacionPos({ idPedido, estatus, numCotizaPos, estado, errorPos }: Props) {

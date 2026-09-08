@@ -88,9 +88,11 @@ export interface PedidoResumen {
   canceladoEn: string | null;
   actualizadoEn: string;
   /**
-   * Cotización espejo en el POS (bdav.cotiza), la levanta IA al marcar el
-   * pedido listo (contrato B4/B5). Opcionales mientras IA termina de
-   * mandarlas: si faltan, la pantalla no pinta la sección, no la rompe.
+   * Cotización espejo en el POS (bdav.cotiza), la levanta IA al confirmar el
+   * pedido (contrato B4/B5; antes era al marcarlo listo). Cada edición de un
+   * pedido confirmado la reemite con otro número. Opcionales mientras IA
+   * termina de mandarlas: si faltan, la pantalla no pinta la sección, no la
+   * rompe.
    */
   numCotizaPos?: number | null;
   /** pendiente | simulada | insertada | omitida | error | cancelada */

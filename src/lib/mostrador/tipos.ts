@@ -12,7 +12,8 @@ export type EstatusPedido =
   | "listo"
   | "entregado"
   | "cancelado";
-export type CanalPedido = "mostrador" | "whatsapp" | "web";
+/** `kiosco` = el propio cliente lo armó en la PC del piso de venta (contrato kiosco). */
+export type CanalPedido = "mostrador" | "whatsapp" | "web" | "kiosco";
 export type SucursalEntrega = "matriz" | "fierro";
 export type OrigenPartida = "nueva" | "usada" | "sobre_pedido";
 export type EstatusPartida = "pendiente" | "confirmada" | "sin_existencia" | "sobre_pedido";
@@ -42,6 +43,13 @@ export interface PartidaPedido {
   estatusPartida: EstatusPartida;
   /** Solo sobre_pedido: días que promete el mostrador. */
   diasEntrega: number | null;
+  /**
+   * Piezas que van a la back order de Aldo cuando el sistema marcó el renglón
+   * por faltante (pidieron 3, había 1, van 2); null cuando va la cantidad
+   * completa, que es lo que pasa si lo marcó el mostrador a mano. Opcional
+   * porque el motor puede ser anterior a ese campo.
+   */
+  cantidadAldo?: number | null;
   nota: string | null;
 }
 
@@ -133,6 +141,12 @@ export interface FiltrosPedidos {
   hasta?: string;
   /** Folio, nombre del cliente o teléfono. */
   busqueda?: string;
+  /**
+   * `"si"` = solo pedidos con back order a Aldo (con número en el POS o con
+   * intento registrado: insertada, simulada o error). Cualquier otro valor lo
+   * ignora IA. Es lo que consulta la pantalla /mostrador/backorders.
+   */
+  backorder?: "si";
   pagina: number;
   porPagina: number;
 }
@@ -172,7 +186,15 @@ export interface RenglonBackorderHoja {
   partida: number;
   codigo: string;
   descripcion: string;
+  /** Piezas que van a Aldo: el renglón completo, o solo el faltante de lo que no hay en tienda. */
   cantidad: number;
+  /**
+   * Piezas que pidió el cliente en ese renglón. Cuando es mayor que
+   * `cantidad`, la hoja lo dice ("2 de 3"): el resto ya está en tienda.
+   * Opcional mientras IA termina de mandarlo (contrato back order
+   * automática); sin él la hoja pinta solo la cantidad que va a Aldo.
+   */
+  cantidadPedida?: number;
   /** Como lo guarda el POS en detalle_bko: sin IVA, ya con el descuento del cliente. */
   precioSinIva: number;
   importeSinIva: number;

@@ -1,4 +1,4 @@
-import { Globe, MessageCircle, Store, type LucideIcon } from "lucide-react";
+import { Globe, MessageCircle, MonitorCheck, Store, type LucideIcon } from "lucide-react";
 import clsx from "clsx";
 import { ETIQUETA_CANAL } from "@/lib/mostrador/etiquetas";
 import { ETIQUETA_ESTATUS } from "@/lib/mostrador/reglas";
@@ -77,11 +77,19 @@ interface TonoCanal {
  * Mostrador en tinta de la casa (lo capturó un vendedor aquí), WhatsApp en su
  * verde y Web en el azul acero del plano: no hay otro azul en los tokens, y
  * el gris azul del plano es el que más se separa del verde y de la tinta.
+ * Kiosco en el oro hondo: pasó aquí mismo, como el mostrador, pero lo tecleó
+ * el cliente solo en la PC del piso, y eso el vendedor tiene que verlo de
+ * reojo. Va en el tono APAGADO del metal, nunca en el ámbar de la acción.
  */
 export const TONO_CANAL: Readonly<Record<CanalPedido, TonoCanal>> = {
   mostrador: { chip: "border-tinta/15 bg-tinta/5 text-tinta", icono: "text-tinta", Icono: Store },
   whatsapp: { chip: "border-whatsapp/40 bg-whatsapp/15 text-tinta", icono: "text-existencia", Icono: MessageCircle },
   web: { chip: "border-plano/25 bg-plano/10 text-plano", icono: "text-plano", Icono: Globe },
+  kiosco: {
+    chip: "border-oro-hondo/35 bg-oro-hondo/10 text-oro-hondo",
+    icono: "text-oro-hondo",
+    Icono: MonitorCheck,
+  },
 };
 
 // --- Funciones puras ------------------------------------------------------

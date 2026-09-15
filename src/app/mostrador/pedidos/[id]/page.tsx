@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect, unstable_rethrow } from "next/navigation";
-import { ChevronLeft, FileDown, Printer } from "lucide-react";
+import { ChevronLeft, FileDown, Info, Printer } from "lucide-react";
 import clsx from "clsx";
 import { CancelarPedido } from "@/components/mostrador/CancelarPedido";
 import { pesos } from "@/lib/formato";
@@ -19,6 +19,7 @@ import {
   CLASE_SELLO_ESTATUS,
   ETIQUETA_ESTATUS,
   partidasParaBackorder,
+  piezasPorFaltante,
   puedeCambiarEstatus,
   puedeEditarPedido,
 } from "@/lib/mostrador/reglas";
@@ -78,6 +79,32 @@ function admiteConfirmacion(pedido: PedidoDetalle): boolean {
 
 const CLASE_BOTON_BARRA =
   "rotulo-tecnico inline-flex h-12 items-center gap-2 rounded-md border border-linea bg-hoja px-4 text-sm text-tinta transition-colors duration-150 hover:border-tinta";
+
+/**
+ * Anotación antes de confirmar: cuántas piezas se irán solas a la back order
+ * de Aldo porque no hay existencia para ellas. Es un aviso, no una alarma: va
+ * en gris y sin ámbar (el ámbar de esta pantalla es "Confirmar pedido"), y
+ * dice de dónde sale el número —la existencia de cuando se capturó— para que
+ * nadie lo lea como una promesa: al confirmar, IA relee bdav y ese número es
+ * el que manda.
+ */
+function AvisoFaltante({ piezas }: { piezas: number }) {
+  const plural = piezas === 1 ? "pieza" : "piezas";
+  return (
+    <p className="flex items-start gap-2 rounded-md border border-linea bg-hoja px-4 py-3 text-sm text-tinta-suave">
+      <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-plano" />
+      <span>
+        <span className="num-tab font-semibold text-tinta">
+          {piezas} {plural} sin existencia
+        </span>{" "}
+        se {piezas === 1 ? "pedirá" : "pedirán"} a Aldo al confirmar. La cuenta sale de la existencia
+        de cuando se capturó el pedido; al confirmar se vuelve a revisar en el POS y se pide solo lo
+        que falte. Si ya {piezas === 1 ? "la tienes" : "las tienes"}, márcalo arriba renglón por
+        renglón.
+      </span>
+    </p>
+  );
+}
 
 function Dato({ etiqueta, children, className }: { etiqueta: string; children: React.ReactNode; className?: string }) {
   return (
@@ -194,6 +221,9 @@ export default async function PaginaPedido({ params }: Contexto) {
   // borrador no: sin folio no hay pedido que mandar a Aldo.
   const partidasAldo = partidasParaBackorder(pedido.partidas);
   const conBkoPos = pedido.estatus !== "borrador" && (pedido.bkoPosEstado !== undefined || partidasAldo.length > 0);
+  // Piezas que se irían solas a Aldo por falta de existencia (vista optimista
+  // con la existencia capturada); el aviso va junto a "Confirmar pedido".
+  const piezasFaltantes = piezasPorFaltante(pedido.partidas);
 
   return (
     <div className="flex flex-col gap-6">
@@ -367,7 +397,10 @@ export default async function PaginaPedido({ params }: Contexto) {
         </section>
       </div>
 
-      <section aria-label="Cambiar estatus" className="border-t border-linea pt-5">
+      <section aria-label="Cambiar estatus" className="flex flex-col gap-3 border-t border-linea pt-5">
+        {/* Solo en "enviado": es el único estatus desde el que se confirma, y
+            confirmar es lo que dispara la back order. */}
+        {pedido.estatus === "enviado" && piezasFaltantes > 0 && <AvisoFaltante piezas={piezasFaltantes} />}
         <AccionesPedido idPedido={pedido.id} estatus={pedido.estatus} perfil={sesion.perfil} />
       </section>
 

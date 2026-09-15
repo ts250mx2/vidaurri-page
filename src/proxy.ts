@@ -1,13 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { COOKIE_KIOSCO, verificarTokenKiosco } from "@/lib/kiosco/sesion";
+import { esRutaKiosco, esRutaKioscoAbierta, RUTA_KIOSCO_ACTIVAR } from "@/lib/kiosco/rutas";
 import { HEADER_RUTA_MOSTRADOR } from "@/lib/mostrador/api";
 import { COOKIE_MOSTRADOR, verificarTokenMostrador } from "@/lib/mostrador/sesion";
 import { RUTA_LOGIN_MOSTRADOR, RUTA_MOSTRADOR } from "@/lib/mostrador/volver";
 
-// Guardia de borde de /mostrador (Next 16: `proxy.ts`, no `middleware.ts`).
-// Verifica la cookie del vendedor con el secreto compartido y decide antes de
-// renderizar: sin sesión válida todo /mostrador/* manda a login (recordando a
-// dónde iba); con sesión válida, login rebota a la cola de pedidos. Solo corre
-// en las rutas del matcher: el sitio público ni se entera.
+// Guardia de borde de /mostrador y /kiosco (Next 16: `proxy.ts`, no
+// `middleware.ts`). Son DOS guardias distintos sobre dos cookies distintas y
+// dos secretos distintos, y ninguno sabe del otro: la cookie del kiosco no
+// abre /mostrador (ahí se busca `mostrador_sesion`, audiencia "mostrador") y
+// la del mostrador no abre /kiosco (aquí se busca `kiosco_dispositivo`,
+// audiencia "kiosco"). Esa separación es todo el modelo de acceso.
+//
+// En /mostrador se verifica la cookie del vendedor con el secreto compartido y
+// se decide antes de renderizar: sin sesión válida todo /mostrador/* manda a
+// login (recordando a dónde iba); con sesión válida, login rebota a la cola de
+// pedidos. Solo corre en las rutas del matcher: el sitio público ni se entera.
 
 /**
  * `?motivo=sesion` en la URL de login lo pone `/api/mostrador/logout` (GET),
@@ -24,8 +32,30 @@ import { RUTA_LOGIN_MOSTRADOR, RUTA_MOSTRADOR } from "@/lib/mostrador/volver";
 const PARAMETRO_MOTIVO = "motivo";
 const MOTIVO_SESION = "sesion";
 
+/**
+ * /kiosco: la credencial es del APARATO. Sin cookie válida, todo el área
+ * manda a la pantalla de activación; `/kiosco/activar` y `/kiosco/salir`
+ * quedan fuera del candado porque son justo las dos puertas (una para entrar
+ * al modo kiosco, otra para salirse) y ambas piden usuario y clave del POS.
+ */
+async function guardiaKiosco(request: NextRequest): Promise<NextResponse> {
+  const { pathname } = request.nextUrl;
+  if (esRutaKioscoAbierta(pathname)) return NextResponse.next();
+
+  const token = request.cookies.get(COOKIE_KIOSCO)?.value?.trim() ?? "";
+  const sesion = token ? await verificarTokenKiosco(token) : null;
+  if (sesion) return NextResponse.next();
+
+  const respuesta = NextResponse.redirect(new URL(RUTA_KIOSCO_ACTIVAR, request.url));
+  // Cookie vencida o firmada con otro secreto: se limpia para que el
+  // navegador no la siga mandando en cada petición.
+  if (token) respuesta.cookies.delete(COOKIE_KIOSCO);
+  return respuesta;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname, search, searchParams } = request.nextUrl;
+  if (esRutaKiosco(pathname)) return guardiaKiosco(request);
   const token = request.cookies.get(COOKIE_MOSTRADOR)?.value?.trim() ?? "";
   const sesion = token ? await verificarTokenMostrador(token) : null;
   const esLogin = pathname === RUTA_LOGIN_MOSTRADOR;
@@ -55,5 +85,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/mostrador/:path*"],
+  matcher: ["/mostrador/:path*", "/kiosco/:path*"],
 };

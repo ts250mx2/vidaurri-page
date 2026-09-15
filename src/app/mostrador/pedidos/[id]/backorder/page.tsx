@@ -243,6 +243,16 @@ async function Encabezado({ hoja }: { hoja: HojaBackorder }) {
   );
 }
 
+/**
+ * Piezas del renglón que el cliente pidió, cuando son MÁS que las que van a
+ * Aldo (el resto ya está en tienda). null cuando coinciden o cuando IA
+ * todavía no manda `cantidadPedida`: ahí no hay nada que aclarar.
+ */
+function pedidasSiDifieren(renglon: RenglonBackorderHoja): number | null {
+  const pedidas = renglon.cantidadPedida;
+  return typeof pedidas === "number" && pedidas > renglon.cantidad ? pedidas : null;
+}
+
 function TablaBackorder({ renglones }: { renglones: RenglonBackorderHoja[] }) {
   return (
     <table className="mt-4 w-full border-collapse">
@@ -251,7 +261,9 @@ function TablaBackorder({ renglones }: { renglones: RenglonBackorderHoja[] }) {
           <th scope="col" className={CLASE_TH}>#</th>
           <th scope="col" className={CLASE_TH}>Código</th>
           <th scope="col" className={CLASE_TH}>Descripción</th>
-          <th scope="col" className={clsx(CLASE_TH, "text-right")}>Cant.</th>
+          {/* "a Aldo" y no "Cant." a secas: puede ser menos que lo que pidió
+              el cliente, y quien lee la hoja tiene que saber cuál es cuál. */}
+          <th scope="col" className={clsx(CLASE_TH, "text-right")}>Cant. a Aldo</th>
           <th scope="col" className={clsx(CLASE_TH, "text-right")}>Días</th>
           <th scope="col" className={clsx(CLASE_TH, "text-right")}>Precio s/IVA</th>
           <th scope="col" className={clsx(CLASE_TH, "text-right")}>Importe</th>
@@ -259,12 +271,24 @@ function TablaBackorder({ renglones }: { renglones: RenglonBackorderHoja[] }) {
         </tr>
       </thead>
       <tbody>
-        {renglones.map((renglon) => (
+        {renglones.map((renglon) => {
+          const pedidas = pedidasSiDifieren(renglon);
+          return (
           <tr key={renglon.partida}>
             <td className={clsx(CLASE_TD, "num-tab font-mono text-tinta-suave")}>{renglon.partida}</td>
             <td className={clsx(CLASE_TD, "num-tab whitespace-nowrap font-mono font-semibold")}>{renglon.codigo}</td>
             <td className={CLASE_TD}>{renglon.descripcion}</td>
-            <td className={clsx(CLASE_TD, "num-tab text-right font-mono text-base font-bold")}>{renglon.cantidad}</td>
+            <td className={clsx(CLASE_TD, "num-tab text-right font-mono text-base font-bold")}>
+              {renglon.cantidad}
+              {/* "2 de 3": el resto del renglón ya está en tienda y no se le
+                  pide a Aldo. Se dice aquí y no en una nota al pie porque es
+                  la cifra que el proveedor surte. */}
+              {pedidas !== null && (
+                <span className="block whitespace-nowrap text-xs font-normal text-tinta-suave">
+                  de {pedidas} pedidas
+                </span>
+              )}
+            </td>
             <td className={clsx(CLASE_TD, "num-tab text-right font-mono")}>{renglon.diasEntrega ?? "—"}</td>
             <td className={clsx(CLASE_TD, "num-tab whitespace-nowrap text-right font-mono")}>{pesos(renglon.precioSinIva)}</td>
             <td className={clsx(CLASE_TD, "num-tab whitespace-nowrap text-right font-mono font-semibold")}>
@@ -275,7 +299,8 @@ function TablaBackorder({ renglones }: { renglones: RenglonBackorderHoja[] }) {
               <span className="sr-only">Casilla para marcar recibido</span>
             </td>
           </tr>
-        ))}
+          );
+        })}
       </tbody>
     </table>
   );
@@ -317,7 +342,7 @@ function Firma({ etiqueta, nombre }: { etiqueta: string; nombre?: string | null 
   );
 }
 
-function Pie({ hoja }: { hoja: HojaBackorder }) {
+function Pie({ hoja, conParciales }: { hoja: HojaBackorder; conParciales: boolean }) {
   const { pedido, backorder } = hoja;
   return (
     <footer className="mt-8 grid gap-6 sm:grid-cols-[1fr_13rem_13rem]">
@@ -327,6 +352,12 @@ function Pie({ hoja }: { hoja: HojaBackorder }) {
           {pedido.observaciones ?? "Sin observaciones."}
         </p>
         <p className="mt-4 text-xs text-tinta-suave">
+          {conParciales && (
+            <>
+              Donde dice “de N pedidas”, el resto del renglón ya está en tienda: a Aldo solo se le
+              pide el faltante.{" "}
+            </>
+          )}
           Precios sin IVA por renglón, como los guarda el POS; el IVA va en el total. Hoja generada el{" "}
           <span className="num-tab font-mono">{fechaHora(hoja.generadoEn) || "—"}</span>.
         </p>
@@ -381,7 +412,7 @@ export default async function PaginaBackorder({ params, searchParams }: Contexto
           <Encabezado hoja={hoja} />
           <TablaBackorder renglones={hoja.renglones} />
           <Totales totales={hoja.totales} />
-          <Pie hoja={hoja} />
+          <Pie hoja={hoja} conParciales={hoja.renglones.some((renglon) => pedidasSiDifieren(renglon) !== null)} />
         </article>
       ) : (
         <div className="lamina mx-auto w-full max-w-md px-5 py-6 text-center">

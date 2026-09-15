@@ -26,7 +26,7 @@ const CLASE_CAMPO =
 const CLASE_ETIQUETA =
   "mb-1.5 block font-display text-[11px] font-bold uppercase leading-none tracking-[0.14em] text-tinta-suave";
 
-const CANALES: ReadonlyArray<CanalPedido> = ["mostrador", "whatsapp", "web"];
+const CANALES: ReadonlyArray<CanalPedido> = ["mostrador", "whatsapp", "web", "kiosco"];
 
 export function FiltrosPedidos({ iniciales, hayFiltrosUrl }: { iniciales: FiltrosBase; hayFiltrosUrl: boolean }) {
   const router = useRouter();

@@ -16,6 +16,7 @@ export const ETIQUETA_CANAL: Readonly<Record<CanalPedido, string>> = {
   mostrador: "Mostrador",
   whatsapp: "WhatsApp",
   web: "Web",
+  kiosco: "Kiosco",
 };
 
 export const ETIQUETA_SUCURSAL: Readonly<Record<SucursalEntrega, string>> = {
@@ -86,6 +87,7 @@ const ETIQUETA_EVENTO: Readonly<Record<string, string>> = {
   backorder_pos_cancelada: "Back order cancelada en el POS",
   backorder_pos_error: "Error al crear la back order en el POS",
   backorder_pos_omitida: "Back order omitida",
+  sobre_pedido_automatico: "Piezas sin existencia marcadas para Aldo",
 };
 
 /**
@@ -227,9 +229,27 @@ const CLASE_SELLO_BKO_POS: Readonly<Record<string, string>> = {
   cancelada: "sello text-anotacion",
 };
 
+/**
+ * El mismo estado en una o dos palabras, para las celdas angostas de la lista
+ * de back orders; el texto completo se queda en el `title`.
+ */
+const ETIQUETA_BKO_POS_CORTA: Readonly<Record<string, string>> = {
+  pendiente: "Pendiente",
+  simulada: "Simulada",
+  insertada: "En el POS",
+  omitida: "Omitida",
+  error: "Error",
+  cancelada: "Cancelada",
+};
+
 /** Texto del estado de la back order; uno desconocido sale tal cual, sin guiones. */
 export function etiquetaBkoPos(estado: string): string {
   return ETIQUETA_BKO_POS[estado] ?? estado.replace(/_/g, " ");
+}
+
+/** Versión corta del estado; sin versión corta, la larga. */
+export function etiquetaBkoPosCorta(estado: string): string {
+  return ETIQUETA_BKO_POS_CORTA[estado] ?? etiquetaBkoPos(estado);
 }
 
 /** Clases del sello del estado; uno desconocido va en gris. */

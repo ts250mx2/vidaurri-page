@@ -17,6 +17,7 @@ export const metadata: Metadata = {
 
 const NAVEGACION = [
   { href: RUTA_MOSTRADOR, etiqueta: "Pedidos" },
+  { href: `${RUTA_MOSTRADOR}/backorders`, etiqueta: "Back orders" },
   { href: `${RUTA_MOSTRADOR}/nuevo`, etiqueta: "Nuevo pedido" },
 ] as const;
 

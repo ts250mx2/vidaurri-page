@@ -541,6 +541,14 @@ textarea {
   outline-offset: 2px;
 }
 
+/* En el kiosco el buscador vive SIEMPRE enfocado (el cliente llega y teclea):
+   un recuadro rojo permanente se lee como error, no como foco. Sobre papel el
+   foco va en tinta. Va ANTES de la regla del campo azul para que dentro de la
+   barra oscura siga ganando el ámbar, que es lo que ahí contrasta. */
+.piso-kiosco :focus-visible {
+  outline-color: var(--color-tinta);
+}
+
 /* Sobre el campo azul la anotación roja se apaga: ahí manda el ámbar. */
 .sobre-plano :focus-visible {
   outline-color: var(--color-ambar);

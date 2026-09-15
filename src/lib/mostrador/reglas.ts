@@ -1,4 +1,11 @@
-import type { CanalPedido, EstatusPedido, PartidaPedido, PerfilPos, SucursalEntrega } from "./tipos";
+import type {
+  CanalPedido,
+  EstatusPedido,
+  PartidaPedido,
+  PedidoResumen,
+  PerfilPos,
+  SucursalEntrega,
+} from "./tipos";
 
 // Reglas de pedidos copiadas literal de vidaurri-ia (`src/lib/pedidos.ts`).
 // Aquí solo sirven para PINTAR: qué botones de estatus mostrar a cada perfil y
@@ -37,7 +44,7 @@ const ESTATUS_PEDIDO: ReadonlyArray<string> = [
   "cancelado",
 ];
 const SUCURSALES: ReadonlyArray<string> = ["matriz", "fierro"];
-const CANALES: ReadonlyArray<string> = ["mostrador", "whatsapp", "web"];
+const CANALES: ReadonlyArray<string> = ["mostrador", "whatsapp", "web", "kiosco"];
 
 // Guardas de tipo para lo que llega del querystring (mismas que en IA). Aquí
 // solo deciden qué filtro pintar seleccionado; IA vuelve a validar lo suyo.
@@ -84,19 +91,62 @@ export function puedeTenerBackorder(estatus: EstatusPedido): boolean {
 }
 
 /**
- * Partidas que se piden al proveedor (copia de `partidasParaBackorder` de
- * IA): las que el mostrador marcó "sobre pedido" al confirmar, o las que
+ * Piezas de ESE renglón que se pedirían a Aldo por falta de existencia
+ * (copia de la regla nueva de IA, contrato back order automática): solo las
+ * nuevas que nadie ha revisado (`pendiente`) y cuya existencia no alcanzaba
+ * para lo que pidió el cliente. 0 en todo lo demás.
+ *
+ * OJO: se calcula con `existenciaAlPedir`, la existencia de CUANDO se capturó
+ * el pedido, que es lo único que tiene la pantalla. Al confirmar, IA vuelve a
+ * leer la existencia actual en bdav y ese número manda. Sin existencia
+ * capturada (null) no se deduce nada: nunca se inventa un faltante.
+ */
+export function faltantePorExistencia(partida: PartidaPedido): number {
+  if (partida.origen !== "nueva" || partida.estatusPartida !== "pendiente") return 0;
+  if (partida.existenciaAlPedir === null) return 0;
+  return Math.max(0, partida.cantidad - Math.max(0, partida.existenciaAlPedir));
+}
+
+/** Piezas (no renglones) que se pedirían a Aldo por falta de existencia al confirmar. */
+export function piezasPorFaltante(partidas: PartidaPedido[]): number {
+  return partidas.reduce((total, partida) => total + faltantePorExistencia(partida), 0);
+}
+
+/**
+ * Partidas que PODRÍAN irse a la back order (copia de `partidasParaBackorder`
+ * de IA): las que el mostrador marcó "sobre pedido" al confirmar, las que
  * nacieron sobre pedido y nadie dijo todavía que sí hay en tienda
- * (pendiente). Nunca usadas; nunca confirmadas ni sin existencia. Aquí solo
- * decide si hay hoja de back order que imprimir.
+ * (pendiente), y las nuevas pendientes cuya existencia capturada no alcanzaba.
+ * Nunca usadas; nunca confirmadas ni sin existencia.
+ *
+ * Es una vista OPTIMISTA, no la verdad: las últimas dependen de la existencia
+ * de cuando se capturó el pedido, y al confirmar IA relee bdav y decide. Aquí
+ * solo sirve para saber si se pinta el panel de back order y si hay hoja que
+ * imprimir.
  */
 export function partidasParaBackorder(partidas: PartidaPedido[]): PartidaPedido[] {
   return partidas.filter(
     (partida) =>
       partida.origen !== "usada" &&
       (partida.estatusPartida === "sobre_pedido" ||
-        (partida.origen === "sobre_pedido" && partida.estatusPartida === "pendiente"))
+        (partida.origen === "sobre_pedido" && partida.estatusPartida === "pendiente") ||
+        faltantePorExistencia(partida) > 0)
   );
+}
+
+/** Estados de `bkoPosEstado` que cuentan como "este pedido tiene back order" aunque no haya número. */
+const ESTADOS_CON_BACKORDER: ReadonlyArray<string> = ["insertada", "simulada", "error"];
+
+/**
+ * Si el pedido tiene back order a Aldo. Copia del filtro `backorder=si` de IA
+ * (`num_bko_pos IS NOT NULL OR bko_pos_estado IN (...)`). La lista de back
+ * orders la pide ya filtrada; esto es el cinturón por si el motor todavía no
+ * entiende el filtro y devuelve la cola entera: más vale una lista corta que
+ * una pantalla que miente.
+ */
+export function tieneBackorder(pedido: Pick<PedidoResumen, "numBkoPos" | "bkoPosEstado">): boolean {
+  if (typeof pedido.numBkoPos === "number") return true;
+  return pedido.bkoPosEstado !== undefined && ESTADOS_CON_BACKORDER.includes(pedido.bkoPosEstado);
 }
 
 /** Topes de captura (mismos valores que IA); aquí solo acotan en pantalla antes de viajar. */

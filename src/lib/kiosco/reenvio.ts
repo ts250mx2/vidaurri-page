@@ -1,12 +1,22 @@
+import { cookies } from "next/headers";
 import type { MetodoHttp } from "@/lib/mostrador/api";
 import { reenviarAKiosco } from "./api";
-import { cabeceraKiosco, sesionKiosco } from "./sesion";
+import { CODIGO_SESION_CLIENTE } from "./navegador";
+import {
+  cabeceraKiosco,
+  COOKIE_KIOSCO_CLIENTE,
+  sesionClienteKiosco,
+  sesionKiosco,
+} from "./sesion";
 import {
   sanearAcuse,
   sanearArticulo,
+  sanearDetalleDeCliente,
   sanearPedido,
+  sanearPedidoDeCliente,
   sanearPiezaDeVico,
   type ArticuloKiosco,
+  type PedidoDeCliente,
   type PiezaDeVico,
 } from "./tipos";
 
@@ -23,6 +33,8 @@ import {
 
 export const ERROR_SIN_KIOSCO = "Esta computadora no está activada como kiosco";
 export const ERROR_PETICION = "No entendí la petición; inténtalo otra vez";
+export const ERROR_SIN_CLIENTE = "Entra con tu celular para ver tus pedidos";
+export const ERROR_CLIENTE_RECHAZADO = "Tu sesión terminó; vuelve a entrar con tu celular";
 
 /** Los mismos 8 que promete IA; si un día manda más, no se pinta una lista infinita. */
 const MAX_PIEZAS_VICO = 8;
@@ -38,11 +50,32 @@ export interface OpcionesProxyKiosco {
   tiempoMaximoMs?: number;
   /** Recorte de la respuesta `{ ok: true, ... }`; los errores pasan tal cual. */
   recortar?: (datos: Objeto) => Objeto;
+  /** La ruta solo tiene sentido con un cliente que entró: sin su cookie, 401 `codigo: "cliente"`. */
+  exigirCliente?: boolean;
 }
 
 /** Respuesta `{ ok: false, error }`, la forma única de error del kiosco. */
 export function respuestaError(status: number, error: string): Response {
   return Response.json({ ok: false, error }, { status });
+}
+
+/**
+ * 401 de la sesión del CLIENTE, distinto del 401 del aparato: el navegador lo
+ * distingue por `codigo` y recarga el inicio en vez de mandar a activar.
+ */
+export function respuestaSinCliente(error: string): Response {
+  return Response.json({ ok: false, error, codigo: CODIGO_SESION_CLIENTE }, { status: 401 });
+}
+
+/** Borra la cookie del cliente: al salir, y cuando IA dice que ese cliente ya no vale. */
+export async function borrarCookieCliente(): Promise<void> {
+  const jar = await cookies();
+  jar.delete(COOKIE_KIOSCO_CLIENTE);
+}
+
+/** `true` si IA rechazó la cabecera `X-Kiosco-Cliente` (401 con `codigo: "cliente"`). */
+function iaRechazoAlCliente(status: number, datos: unknown): boolean {
+  return status === 401 && esObjeto(datos) && datos.codigo === CODIGO_SESION_CLIENTE;
 }
 
 function esObjeto(valor: unknown): valor is Objeto {
@@ -119,6 +152,20 @@ export function recorteVico(datos: Objeto): Objeto {
   };
 }
 
+/** Lista de pedidos del cliente: solo lo que IA proyecta, y nada con id interno. */
+export function recortePedidosDeCliente(datos: Objeto): Objeto {
+  const pedidos = arreglo(datos, "pedidos")
+    .map(sanearPedidoDeCliente)
+    .filter((p): p is PedidoDeCliente => p !== null);
+  return { ok: true, pedidos };
+}
+
+/** Un pedido del cliente con sus renglones; si no trae con qué pintarlo, se dice. */
+export function recortePedidoDeCliente(datos: Objeto): Objeto {
+  const pedido = sanearDetalleDeCliente(datos.pedido);
+  return pedido ? { ok: true, pedido } : { ok: false, error: "No pude leer ese pedido" };
+}
+
 // --- El proxy -------------------------------------------------------------
 
 /** Reenvía la petición a `ruta` de IA (sin el prefijo) conservando la querystring. */
@@ -129,6 +176,10 @@ export async function proxyKiosco(
 ): Promise<Response> {
   const sesion = await sesionKiosco();
   if (!sesion) return respuestaError(401, ERROR_SIN_KIOSCO);
+  // La sesión del cliente es opcional: con ella IA cotiza con su descuento y
+  // pone el pedido a su nombre; sin ella, público general, como siempre.
+  const cliente = await sesionClienteKiosco();
+  if (opciones.exigirCliente && !cliente) return respuestaSinCliente(ERROR_SIN_CLIENTE);
 
   let cuerpo: unknown = undefined;
   if (opciones.conCuerpo) {
@@ -142,8 +193,18 @@ export async function proxyKiosco(
     metodo: opciones.metodo,
     cuerpo,
     kiosco: cabeceraKiosco(sesion),
+    cliente: cliente?.idCliente ?? null,
     tiempoMaximoMs: opciones.tiempoMaximoMs,
   });
+
+  // IA revalida al cliente en cada llamada; si ya no está en el padrón, su
+  // cookie se borra aquí mismo para que la siguiente petición salga como
+  // público general y no se quede en un bucle de 401.
+  if (cliente && iaRechazoAlCliente(status, datos)) {
+    console.error("[kiosco] IA rechazó la sesión del cliente", cliente.idCliente);
+    await borrarCookieCliente();
+    return respuestaSinCliente(ERROR_CLIENTE_RECHAZADO);
+  }
 
   const correcta = status === 200 && esObjeto(datos) && datos.ok === true;
   if (!correcta || !opciones.recortar) return Response.json(datos, { status });

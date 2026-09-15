@@ -68,6 +68,29 @@ export function telefonoTecleado(valor: string): string {
   return `${digitos.slice(0, 2)} ${digitos.slice(2, 6)} ${digitos.slice(6)}`;
 }
 
+/**
+ * El celular con el que el cliente registrado entra al kiosco: los 10 dígitos
+ * que se van a buscar en el padrón, o null si lo tecleado no da para eso.
+ * Misma regla que `validarTelefonoKiosco` de IA, que vuelve a validar.
+ */
+export function validarTelefonoKiosco(entrada: unknown): string | null {
+  if (typeof entrada !== "string") return null;
+  const telefono = soloDigitos(entrada);
+  return telefono.length === TELEFONO_DIGITOS ? telefono : null;
+}
+
+/**
+ * El celular de la sesión, para pintarlo en una PC compartida: solo los
+ * últimos 4 dígitos a la vista ("81 •••• 5678"). El cliente lo reconoce como
+ * suyo y quien pase por detrás no se lo lleva. Cualquier otra cosa se
+ * enmascara entera.
+ */
+export function telefonoEnmascarado(telefono: string): string {
+  const digitos = soloDigitos(telefono);
+  if (digitos.length !== TELEFONO_DIGITOS) return "••••";
+  return `${digitos.slice(0, 2)} •••• ${digitos.slice(6)}`;
+}
+
 export interface DatosCliente {
   nombre: string;
   telefono: string;

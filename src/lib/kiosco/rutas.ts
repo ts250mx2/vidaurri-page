@@ -1,9 +1,13 @@
 // Rutas del kiosco en un solo lugar: las usan el guardia de borde
 // (`src/proxy.ts`), las páginas y los formularios de activación y salida.
-// El kiosco NO tiene navegación: estas cinco son todas las pantallas que
+// El kiosco NO tiene navegación: estas siete son todas las pantallas que
 // existen, y ninguna lleva al resto del sitio.
 
 export const RUTA_KIOSCO = "/kiosco";
+/** El cliente registrado entra con su celular; detrás del candado del aparato. */
+export const RUTA_KIOSCO_ENTRAR = "/kiosco/entrar";
+/** Los pedidos del cliente que entró; sin sesión de cliente manda a entrar. */
+export const RUTA_KIOSCO_MIS_PEDIDOS = "/kiosco/mis-pedidos";
 /** Datos del cliente: el paso 2, con el resumen y el botón de enviar. */
 export const RUTA_KIOSCO_PEDIDO = "/kiosco/pedido";
 /** Acuse con el folio: el paso 3. */

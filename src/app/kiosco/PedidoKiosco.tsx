@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Trash2 } from "lucide-react";
+import { ArrowRight, Trash2, X } from "lucide-react";
 import { Stepper } from "@/components/mostrador/Stepper";
+import { useArea } from "@/components/kiosco/AreaContext";
 import {
   CLASE_BOTON_AMBAR_KIOSCO,
   CLASE_ERROR_KIOSCO,
@@ -13,26 +14,32 @@ import { nombreSucursal } from "@/lib/kiosco/identidad";
 import type { PartidaKiosco, PedidoKiosco as Pedido } from "@/lib/kiosco/tipos";
 import type { SucursalEntrega } from "@/lib/mostrador/tipos";
 
-// "Tu pedido": la columna de la derecha, siempre a la vista, con lo que el
-// cliente lleva, el total con IVA y la única acción ámbar de la pantalla —
-// Continuar, que lleva a dejar sus datos. Las cantidades se cambian con el
-// mismo stepper del mostrador (botones de 44 px, y el campo se puede teclear);
-// las usadas no llevan stepper porque son una unidad física.
+// "Tu pedido": lo que el cliente lleva, el total con IVA y la única acción
+// ámbar de la pantalla —Continuar, que lleva al paso 2. En pantalla grande es
+// la columna de la derecha, siempre a la vista; en el celular es la hoja que
+// se abre al tocar la barra de abajo (por eso `onCerrar`). Las cantidades se
+// cambian con el mismo stepper del mostrador (botones de 44 px, y el campo se
+// puede teclear); las usadas no llevan stepper porque son una unidad física.
 //
 // Nada de esto se calcula aquí: cada ± y cada quitar le pide a IA que rehaga el
-// borrador y la tarjeta pinta lo que responde, así que el total del kiosco y el
-// que ve el mostrador son siempre el mismo número.
+// borrador y la tarjeta pinta lo que responde, así que el total que ve el
+// cliente y el que ve el mostrador son siempre el mismo número.
 
 const CONFIRMAR_VACIAR = "¿Vaciar tu pedido y empezar de nuevo?";
 
 export interface PropsPedidoKiosco {
   pedido: Pedido | null;
   ocupado: boolean;
-  sucursal: SucursalEntrega;
+  /** Sucursal ya fijada (la del aparato del kiosco); null = la elige el cliente al enviar. */
+  sucursal: SucursalEntrega | null;
+  /** Con cliente del padrón, el pedido ya va a su nombre y no se le piden datos. */
+  nombreCliente: string | null;
   onCantidad: (idPartida: number, cantidad: number) => Promise<string | null>;
   onQuitar: (idPartida: number) => Promise<string | null>;
   onVaciar: () => Promise<string | null>;
   onContinuar: () => void;
+  /** Si viene, la tarjeta es una hoja (móvil) y pinta el botón de cerrarla. */
+  onCerrar?: () => void;
 }
 
 /** Código de bdav o, en usadas, el ID de la pieza en la Bodega. */
@@ -41,15 +48,23 @@ function referenciaDe(partida: PartidaKiosco): string {
   return partida.idPiezaUsada !== null ? `Usada #${partida.idPiezaUsada}` : "";
 }
 
+/** Dónde se recoge, o que eso se elige al final. */
+function textoRecoger(sucursal: SucursalEntrega | null): string {
+  return sucursal ? `lo recoges en ${nombreSucursal(sucursal)}` : "la sucursal la eliges al enviar";
+}
+
 export function PedidoKiosco({
   pedido,
   ocupado,
   sucursal,
+  nombreCliente,
   onCantidad,
   onQuitar,
   onVaciar,
   onContinuar,
+  onCerrar,
 }: PropsPedidoKiosco) {
+  const area = useArea();
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
@@ -71,16 +86,41 @@ export function PedidoKiosco({
     void correr(onVaciar);
   }
 
+  const notaContinuar = nombreCliente
+    ? area.area === "cliente"
+      ? "Ya va a tu nombre y con tu precio de cliente. Después eliges dónde lo recoges; el mostrador lo confirma antes de cobrarte nada."
+      : "Ya va a tu nombre y con tu precio de cliente: solo lo revisas y lo envías. El mostrador lo confirma antes de cobrarte nada."
+    : "Después te pedimos tu nombre y tu celular. El mostrador confirma tu pedido antes de cobrarte nada.";
+
   return (
     <div className="lamina flex h-full flex-col overflow-hidden">
-      <div className="border-b border-linea px-5 py-4">
-        <p className={CLASE_ETIQUETA_KIOSCO}>Tu pedido</p>
-        <p className="mt-1 text-sm text-tinta-suave">
-          Lo recoges en {nombreSucursal(sucursal)}
-        </p>
+      <div className="flex items-start gap-3 border-b border-linea px-4 py-3.5 sm:px-5 sm:py-4">
+        <div className="min-w-0 flex-1">
+          <p className={CLASE_ETIQUETA_KIOSCO}>Tu pedido</p>
+          <p className="mt-1 text-sm text-tinta-suave">
+            {nombreCliente ? (
+              <>
+                A nombre de <span className="font-semibold text-tinta">{nombreCliente}</span> ·{" "}
+                {textoRecoger(sucursal)}
+              </>
+            ) : (
+              <>{sucursal ? `Lo recoges en ${nombreSucursal(sucursal)}` : "La sucursal la eliges al enviar"}</>
+            )}
+          </p>
+        </div>
+        {onCerrar && (
+          <button
+            type="button"
+            onClick={onCerrar}
+            aria-label="Cerrar tu pedido y seguir buscando"
+            className="flex size-11 shrink-0 items-center justify-center rounded-md text-tinta-suave transition-colors duration-150 hover:bg-papel hover:text-tinta"
+          >
+            <X aria-hidden className="size-6" />
+          </button>
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-5">
         {hayPiezas ? (
           <ul className="flex flex-col divide-y divide-linea">
             {partidas.map((partida) => {
@@ -136,7 +176,7 @@ export function PedidoKiosco({
           <div className="py-10 text-center">
             <p className="titulo-lamina text-xl text-tinta">Tu pedido está vacío</p>
             <p className="mt-2 text-sm leading-relaxed text-tinta-suave">
-              Busca tu pieza a la izquierda y toca{" "}
+              Busca tu pieza o pregúntale a Vico y toca{" "}
               <span className="font-semibold text-tinta">Agregar</span>. Puedes poner todas las que
               necesites.
             </p>
@@ -144,7 +184,7 @@ export function PedidoKiosco({
         )}
       </div>
 
-      <div className="border-t border-linea bg-hoja px-5 py-4">
+      <div className="border-t border-linea bg-hoja px-4 py-4 sm:px-5">
         {error && (
           <p role="alert" className={`${CLASE_ERROR_KIOSCO} mb-3`}>
             {error}
@@ -168,10 +208,7 @@ export function PedidoKiosco({
           Continuar
           <ArrowRight aria-hidden className="size-5" />
         </button>
-        <p className="mt-2 text-center text-xs leading-relaxed text-tinta-suave">
-          Después te pedimos tu nombre y tu celular. El mostrador confirma tu pedido antes de
-          cobrarte nada.
-        </p>
+        <p className="mt-2 text-center text-xs leading-relaxed text-tinta-suave">{notaContinuar}</p>
 
         {hayPiezas && (
           <button

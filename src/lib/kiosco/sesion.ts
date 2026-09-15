@@ -88,3 +88,73 @@ export async function sesionKiosco(): Promise<SesionKiosco | null> {
 export function cabeceraKiosco(sesion: SesionKiosco): string {
   return `${sesion.kiosco}|${sesion.sucursal}`;
 }
+
+// --- Sesión del CLIENTE (encima de la del aparato) -------------------------
+//
+// El cliente registrado puede entrar con su celular (contrato kiosco-cliente,
+// 15 sep 2026). Es una segunda cookie, aparte de la del aparato, con otra
+// audiencia y una vida corta: 30 minutos. Es una PC compartida en el piso de
+// la tienda, así que la sesión muere sola (inactividad, "Listo, gracias",
+// Salir) y el siguiente cliente jamás ve el nombre ni los pedidos del
+// anterior. Sin esta cookie todo sigue como público general.
+
+export interface SesionClienteKiosco {
+  /** clientes_descuento.id del padrón; lo que viaja en `X-Kiosco-Cliente`. */
+  idCliente: number;
+  nombre: string;
+  /** Celular nacional de 10 dígitos con el que entró. */
+  telefono: string;
+}
+
+export const COOKIE_KIOSCO_CLIENTE = "kiosco_cliente";
+export const AUDIENCIA_KIOSCO_CLIENTE = "kiosco-cliente";
+/** 30 minutos: lo que tarda un cliente en armar y mandar su pedido, no más. */
+export const DURACION_CLIENTE_S = 30 * 60;
+
+const RE_TELEFONO = /^\d{10}$/;
+
+/** Token del cliente; null si falta el secreto. */
+export async function firmarTokenCliente(sesion: SesionClienteKiosco): Promise<string | null> {
+  const clave = claveSecreta();
+  if (!clave) return null;
+  return new SignJWT({
+    idCliente: sesion.idCliente,
+    nombre: sesion.nombre,
+    telefono: sesion.telefono,
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setAudience(AUDIENCIA_KIOSCO_CLIENTE)
+    .setIssuedAt()
+    .setExpirationTime(`${DURACION_CLIENTE_S}s`)
+    .sign(clave);
+}
+
+/**
+ * Verifica el token del cliente. null si venció, si es de otra audiencia (el
+ * del aparato o el del mostrador) o si el contenido no tiene la forma
+ * esperada: un id que no sea entero positivo no llega jamás a la cabecera.
+ */
+export async function verificarTokenCliente(token: string): Promise<SesionClienteKiosco | null> {
+  const clave = claveSecreta();
+  if (!clave || !token) return null;
+  try {
+    const { payload } = await jwtVerify(token, clave, {
+      audience: AUDIENCIA_KIOSCO_CLIENTE,
+      algorithms: ["HS256"],
+    });
+    const { idCliente, nombre, telefono } = payload;
+    if (typeof idCliente !== "number" || !Number.isInteger(idCliente) || idCliente <= 0) return null;
+    if (typeof nombre !== "string" || !nombre.trim()) return null;
+    if (typeof telefono !== "string" || !RE_TELEFONO.test(telefono)) return null;
+    return { idCliente, nombre: nombre.trim(), telefono };
+  } catch {
+    return null;
+  }
+}
+
+/** Sesión del cliente a partir de su cookie; null si no entró o ya venció. */
+export async function sesionClienteKiosco(): Promise<SesionClienteKiosco | null> {
+  const jar = await cookies();
+  const token = jar.get(COOKIE_KIOSCO_CLIENTE)?.value?.trim();
+  return token ? verificarTokenCliente(token) : null;
+}

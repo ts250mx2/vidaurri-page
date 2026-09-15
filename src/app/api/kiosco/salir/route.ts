@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { comprobarUsuarioPos, validarCredenciales } from "@/lib/kiosco/acceso";
-import { COOKIE_KIOSCO } from "@/lib/kiosco/sesion";
+import { COOKIE_KIOSCO, COOKIE_KIOSCO_CLIENTE } from "@/lib/kiosco/sesion";
 import { ipDe } from "@/lib/mostrador/reenvio";
 
 // Salir del modo kiosco: se vuelve a pedir usuario y clave del POS y se borra
@@ -32,5 +32,7 @@ export async function POST(request: Request) {
 
   const jar = await cookies();
   jar.delete(COOKIE_KIOSCO);
+  // Sin aparato no hay cliente: la sesión del cliente se va con la del kiosco.
+  jar.delete(COOKIE_KIOSCO_CLIENTE);
   return Response.json({ ok: true });
 }

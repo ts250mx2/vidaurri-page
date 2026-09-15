@@ -2,34 +2,49 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageCircleQuestion, Search, type LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronRight,
+  MessageCircleQuestion,
+  ReceiptText,
+  Search,
+  type LucideIcon,
+} from "lucide-react";
+import { useArea } from "@/components/kiosco/AreaContext";
 import { ChatKiosco } from "@/components/kiosco/ChatKiosco";
-import { CLASE_ERROR_KIOSCO } from "@/components/kiosco/estilos";
+import { CLASE_BOTON_AMBAR_KIOSCO, CLASE_ERROR_KIOSCO } from "@/components/kiosco/estilos";
 import { Tecla } from "@/components/kiosco/Tecla";
 import { NEGOCIO } from "@/config/negocio";
+import { pesos } from "@/lib/formato";
 import {
   esOk,
-  kioscoDesactivado,
-  llamarKiosco,
+  llamarArea,
   mensajeFallo,
   pedidoDeRespuesta,
+  sesionPerdida,
   type RespuestaKioscoNav,
 } from "@/lib/kiosco/navegador";
-import { RUTA_KIOSCO_PEDIDO } from "@/lib/kiosco/rutas";
 import type { PedidoKiosco as Pedido } from "@/lib/kiosco/tipos";
 import type { CapturaPartida, SucursalEntrega } from "@/lib/mostrador/tipos";
 import { BuscadorKiosco } from "./BuscadorKiosco";
 import { PedidoKiosco } from "./PedidoKiosco";
 
-// El armado del pedido: la pantalla que el cliente encuentra encendida. A la
-// izquierda, una sola cosa a la vez: Vico por default (el dueño lo decidió
-// así, 15 sep 2026: el que llega describe la pieza como le salga) y, como
-// opción, buscar por nombre o código; a la derecha, lo que lleva y el total.
-// La otra forma siempre está a la vista en la tarjeta de abajo y a un F2.
+// El armado del pedido, la misma pantalla en el kiosco de la tienda y en el
+// área de clientes (el área la dice el contexto). Una sola cosa a la vez:
+// Vico por default (el dueño lo decidió así, 15 sep 2026: el que llega
+// describe la pieza como le salga) y, como opción, buscar por nombre o
+// código; la otra forma siempre está a la vista en la tarjeta de abajo (y a
+// un F2 donde hay teclado).
+//
+// Móvil primero (390 px): una sola columna con el chat o el buscador, y el
+// pedido como barra fija abajo —piezas, total y Continuar— que al tocarla
+// abre la lista completa como una hoja. Desde `lg` (el kiosco a 1366×768, o
+// el cliente en su PC) el pedido es la columna de la derecha, siempre a la
+// vista.
 //
 // El borrador que tiene IA es la única verdad: cada acción le pide el borrador
 // completo de vuelta y aquí solo se sustituye. Nada de sumar precios en el
-// navegador, o el total del kiosco y el del mostrador acabarían discrepando.
+// navegador, o el total de la pantalla y el del mostrador acabarían discrepando.
 
 type Modo = "buscar" | "vico";
 
@@ -39,32 +54,90 @@ function TarjetaCambio({
   titulo,
   detalle,
   accion,
+  conTecla,
   onClick,
 }: {
   icono: LucideIcon;
   titulo: string;
   detalle: string;
   accion: string;
+  conTecla: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="lamina lamina-enlace flex items-center gap-4 px-5 py-4 text-left"
+      className="lamina lamina-enlace flex items-center gap-3 px-4 py-3 text-left sm:gap-4 sm:px-5 sm:py-4"
     >
-      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-plano text-white">
-        <Icono aria-hidden className="size-6" />
+      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-plano text-white sm:size-12">
+        <Icono aria-hidden className="size-5 sm:size-6" />
       </span>
-      <span className="min-w-0">
-        <span className="rotulo-tecnico block text-base text-tinta">{titulo}</span>
-        <span className="mt-0.5 block text-sm text-tinta-suave">{detalle}</span>
+      <span className="min-w-0 flex-1">
+        <span className="rotulo-tecnico block text-sm text-tinta sm:text-base">{titulo}</span>
+        <span className="mt-0.5 hidden text-sm text-tinta-suave sm:block">{detalle}</span>
       </span>
-      <span className="rotulo-tecnico ml-auto flex shrink-0 items-center gap-2 text-sm text-tinta">
-        {accion}
-        <Tecla>F2</Tecla>
+      <span className="rotulo-tecnico flex shrink-0 items-center gap-2 text-xs text-tinta sm:text-sm">
+        <span className="hidden sm:inline">{accion}</span>
+        {conTecla ? <Tecla>F2</Tecla> : <ChevronRight aria-hidden className="size-5" />}
       </span>
     </button>
+  );
+}
+
+/**
+ * La barra fija de abajo en el celular: cuántas piezas lleva, el total con
+ * IVA y Continuar. Tocar la parte izquierda abre la hoja con el pedido
+ * completo. Es la ÚNICA superficie donde el pedido vive en móvil, así que el
+ * ámbar de Continuar va aquí y no se repite arriba.
+ */
+function BarraPedidoMovil({
+  pedido,
+  bloqueado,
+  onVer,
+  onContinuar,
+}: {
+  pedido: Pedido | null;
+  bloqueado: boolean;
+  onVer: () => void;
+  onContinuar: () => void;
+}) {
+  const piezas = pedido?.piezas ?? 0;
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-linea bg-hoja pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(10_24_38/0.12)] lg:hidden">
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        <button
+          type="button"
+          onClick={onVer}
+          aria-label={`Ver tu pedido: ${piezas} ${piezas === 1 ? "pieza" : "piezas"}, ${pesos(pedido?.total ?? 0)}`}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg py-1 pl-1 pr-2 text-left transition-colors duration-150 hover:bg-papel"
+        >
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-plano text-white">
+            <ReceiptText aria-hidden className="size-5" />
+          </span>
+          <span className="min-w-0">
+            {/* `whitespace-nowrap!`: el rótulo trae `text-wrap: balance` sin capa y
+                partiría "Tu pedido · 1 pieza" en dos renglones. */}
+            <span className="rotulo-tecnico block truncate whitespace-nowrap! text-xs text-tinta-suave">
+              Tu pedido · {piezas} {piezas === 1 ? "pieza" : "piezas"}
+            </span>
+            <span className="num-tab flex items-baseline gap-1.5 font-mono text-xl font-bold text-tinta">
+              {pesos(pedido?.total ?? 0)}
+              <span className="font-sans text-[11px] font-normal text-tinta-suave">IVA incl.</span>
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={onContinuar}
+          disabled={bloqueado || piezas === 0}
+          className={`${CLASE_BOTON_AMBAR_KIOSCO} h-12 shrink-0 px-4 text-sm sm:h-12 sm:text-sm`}
+        >
+          Continuar
+          <ArrowRight aria-hidden className="size-4" />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -78,37 +151,50 @@ export function ArmarPedido({
   borradorInicial,
   errorInicial,
   sucursal,
+  nombreCliente,
 }: {
   borradorInicial: Pedido | null;
   errorInicial: string | null;
-  sucursal: SucursalEntrega;
+  /** Sucursal del aparato (kiosco); null cuando el cliente la elige al enviar. */
+  sucursal: SucursalEntrega | null;
+  /** Nombre del cliente del padrón que entró; null = público general. */
+  nombreCliente: string | null;
 }) {
+  const area = useArea();
   const router = useRouter();
   const [pedido, setPedido] = useState<Pedido | null>(borradorInicial);
   const [error, setError] = useState<string | null>(errorInicial);
   const [modo, setModo] = useState<Modo>("vico");
   const [ocupado, setOcupado] = useState(false);
+  /** La hoja del pedido en móvil; en pantalla grande el pedido siempre está a la vista. */
+  const [hojaAbierta, setHojaAbierta] = useState(false);
 
-  // F2 cambia entre Vico y el buscador desde cualquier parte de la pantalla:
-  // el cliente que ya está tecleando no tiene que soltar el teclado.
+  // F2 cambia entre Vico y el buscador desde cualquier parte de la pantalla
+  // (donde hay teclado): el cliente que ya está tecleando no lo suelta.
+  // Escape cierra la hoja del pedido si estaba abierta.
   useEffect(() => {
     function atajo(evento: globalThis.KeyboardEvent) {
-      if (evento.key !== "F2") return;
+      if (evento.key === "Escape" && hojaAbierta) {
+        evento.preventDefault();
+        setHojaAbierta(false);
+        return;
+      }
+      if (evento.key !== "F2" || !area.conTeclado) return;
       evento.preventDefault();
       setModo((actual) => (actual === "vico" ? "buscar" : "vico"));
     }
     window.addEventListener("keydown", atajo);
     return () => window.removeEventListener("keydown", atajo);
-  }, []);
+  }, [area.conTeclado, hojaAbierta]);
 
   /** Relee el borrador de IA cuando una respuesta no lo trajo. */
   const releer = useCallback(async (): Promise<string | null> => {
-    const respuesta = await llamarKiosco("/borrador");
-    if (kioscoDesactivado(respuesta.status)) return null;
+    const respuesta = await llamarArea(area, "/borrador");
+    if (sesionPerdida(area, respuesta)) return null;
     if (!esOk(respuesta.datos)) return mensajeFallo(respuesta, ERROR_RELEER);
     setPedido(pedidoDeRespuesta(respuesta.datos));
     return null;
-  }, []);
+  }, [area]);
 
   /**
    * Guarda el borrador que devolvió IA. Si la respuesta salió bien pero no lo
@@ -117,7 +203,7 @@ export function ArmarPedido({
    */
   const aplicar = useCallback(
     async (respuesta: RespuestaKioscoNav, porDefecto: string): Promise<string | null> => {
-      if (kioscoDesactivado(respuesta.status)) return null;
+      if (sesionPerdida(area, respuesta)) return null;
       if (!esOk(respuesta.datos)) return mensajeFallo(respuesta, porDefecto);
       const devuelto = pedidoDeRespuesta(respuesta.datos);
       if (devuelto) {
@@ -126,7 +212,7 @@ export function ArmarPedido({
       }
       return releer();
     },
-    [releer]
+    [area, releer]
   );
 
   const agregarPieza = useCallback(
@@ -134,17 +220,17 @@ export function ArmarPedido({
       setOcupado(true);
       setError(null);
       try {
-        const respuesta = await llamarKiosco("/borrador/partidas", { cuerpo: captura });
+        const respuesta = await llamarArea(area, "/borrador/partidas", { cuerpo: captura });
         return await aplicar(respuesta, ERROR_AGREGAR);
       } finally {
         setOcupado(false);
       }
     },
-    [aplicar]
+    [area, aplicar]
   );
 
   async function cambiarCantidad(idPartida: number, cantidad: number): Promise<string | null> {
-    const respuesta = await llamarKiosco(`/borrador/partidas/${idPartida}`, {
+    const respuesta = await llamarArea(area, `/borrador/partidas/${idPartida}`, {
       metodo: "PATCH",
       cuerpo: { cantidad },
     });
@@ -152,13 +238,13 @@ export function ArmarPedido({
   }
 
   async function quitarPartida(idPartida: number): Promise<string | null> {
-    const respuesta = await llamarKiosco(`/borrador/partidas/${idPartida}`, { metodo: "DELETE" });
+    const respuesta = await llamarArea(area, `/borrador/partidas/${idPartida}`, { metodo: "DELETE" });
     return aplicar(respuesta, ERROR_QUITAR);
   }
 
   async function vaciar(): Promise<string | null> {
-    const respuesta = await llamarKiosco("/borrador", { metodo: "DELETE" });
-    if (kioscoDesactivado(respuesta.status)) return null;
+    const respuesta = await llamarArea(area, "/borrador", { metodo: "DELETE" });
+    if (sesionPerdida(area, respuesta)) return null;
     if (!esOk(respuesta.datos)) return mensajeFallo(respuesta, ERROR_VACIAR);
     setPedido(null);
     return null;
@@ -168,22 +254,41 @@ export function ArmarPedido({
     setPedido(devuelto);
   }, []);
 
+  function continuar() {
+    router.push(area.rutas.datos);
+  }
+
+  const propsPedido = {
+    pedido,
+    ocupado,
+    sucursal,
+    nombreCliente,
+    onCantidad: cambiarCantidad,
+    onQuitar: quitarPartida,
+    onVaciar: vaciar,
+    onContinuar: continuar,
+  };
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 pb-20 sm:gap-4 lg:pb-0">
       {error && (
         <p role="alert" className={CLASE_ERROR_KIOSCO}>
           {error}
         </p>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-12 lg:items-stretch">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-12 lg:items-stretch lg:gap-5">
         <section
           aria-label={modo === "vico" ? `Pregúntale a ${NEGOCIO.asistente}` : "Busca tu pieza"}
-          className="flex h-[calc(100vh-11.5rem)] min-h-[440px] flex-col gap-3 lg:col-span-8"
+          className="flex min-h-0 flex-col gap-3 lg:col-span-8"
         >
           <div className="min-h-0 flex-1">
             {modo === "vico" ? (
-              <ChatKiosco onPedido={recibirPedidoDeVico} onAgregar={agregarPieza} />
+              <ChatKiosco
+                nombreCliente={nombreCliente}
+                onPedido={recibirPedidoDeVico}
+                onAgregar={agregarPieza}
+              />
             ) : (
               <BuscadorKiosco
                 ocupado={ocupado}
@@ -199,6 +304,7 @@ export function ArmarPedido({
               titulo="¿Ya sabes cómo se llama la pieza?"
               detalle="Búscala por nombre o por código: “FACIA VERSA”, “calavera Aveo”, “DDNVE15”."
               accion="Busca tu pieza"
+              conTecla={area.conTeclado}
               onClick={() => setModo("buscar")}
             />
           ) : (
@@ -207,26 +313,43 @@ export function ArmarPedido({
               titulo="¿No sabes cómo se llama la pieza?"
               detalle={`Descríbesela a ${NEGOCIO.asistente} como se te ocurra: “el foco de adelante de un Versa 2016”.`}
               accion={`Pregúntale a ${NEGOCIO.asistente}`}
+              conTecla={area.conTeclado}
               onClick={() => setModo("vico")}
             />
           )}
         </section>
 
-        <aside
-          aria-label="Tu pedido"
-          className="h-[calc(100vh-11.5rem)] min-h-[440px] lg:col-span-4"
-        >
-          <PedidoKiosco
-            pedido={pedido}
-            ocupado={ocupado}
-            sucursal={sucursal}
-            onCantidad={cambiarCantidad}
-            onQuitar={quitarPartida}
-            onVaciar={vaciar}
-            onContinuar={() => router.push(RUTA_KIOSCO_PEDIDO)}
-          />
+        <aside aria-label="Tu pedido" className="hidden min-h-0 lg:col-span-4 lg:block">
+          <PedidoKiosco {...propsPedido} />
         </aside>
       </div>
+
+      <BarraPedidoMovil
+        pedido={pedido}
+        bloqueado={ocupado}
+        onVer={() => setHojaAbierta(true)}
+        onContinuar={continuar}
+      />
+
+      {hojaAbierta && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Tu pedido"
+          className="fixed inset-0 z-50 flex flex-col justify-end bg-plano-hondo/60 backdrop-blur-sm lg:hidden"
+        >
+          {/* Tocar fuera de la hoja la cierra; el botón de la esquina también. */}
+          <button
+            type="button"
+            aria-label="Cerrar tu pedido"
+            onClick={() => setHojaAbierta(false)}
+            className="min-h-12 flex-1"
+          />
+          <div className="h-[85dvh] px-2 pb-2">
+            <PedidoKiosco {...propsPedido} onCerrar={() => setHojaAbierta(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,24 +3,36 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CLASE_BOTON_AMBAR_KIOSCO } from "./estilos";
-import { llamarKiosco } from "@/lib/kiosco/navegador";
-import { RUTA_KIOSCO, RUTA_KIOSCO_PEDIDO } from "@/lib/kiosco/rutas";
+import { cerrarTurno } from "@/lib/kiosco/navegador";
+import {
+  RUTA_KIOSCO,
+  RUTA_KIOSCO_ENTRAR,
+  RUTA_KIOSCO_MIS_PEDIDOS,
+  RUTA_KIOSCO_PEDIDO,
+} from "@/lib/kiosco/rutas";
 
 // El cliente se va sin avisar: es lo normal en un mostrador. A los 90 segundos
 // sin teclado ni ratón el kiosco pregunta "¿Sigues ahí?" y da 15 más; si nadie
-// contesta, tira el borrador y vuelve al inicio, para que el siguiente cliente
-// no herede el pedido del anterior ni vea su nombre.
+// contesta, cierra el turno —el borrador y la sesión del cliente que entró con
+// su celular— y vuelve al inicio, para que el siguiente cliente no herede el
+// pedido del anterior, ni vea su nombre, ni sus pedidos.
 //
-// Solo vigila las dos pantallas donde hay un pedido a medias. El acuse tiene su
-// propia cuenta (y ahí ya no hay nada que perder), y activar/salir son del
-// personal: borrarles lo que teclean sería una grosería.
+// Vigila las pantallas del CLIENTE: armar, tus datos, entrar y mis pedidos
+// (esta última es la más delicada: son sus pedidos a la vista de quien pase).
+// El acuse tiene su propia cuenta, y activar/salir son del personal:
+// borrarles lo que teclean sería una grosería.
 
 const MS_INACTIVO = 90_000;
 const SEGUNDOS_AVISO = 15;
 /** Los eventos que cuentan como "sigue aquí"; el aviso se cancela con cualquiera. */
 const EVENTOS = ["keydown", "pointerdown", "mousemove", "wheel", "touchstart"] as const;
 
-const RUTAS_VIGILADAS: ReadonlyArray<string> = [RUTA_KIOSCO, RUTA_KIOSCO_PEDIDO];
+const RUTAS_VIGILADAS: ReadonlyArray<string> = [
+  RUTA_KIOSCO,
+  RUTA_KIOSCO_PEDIDO,
+  RUTA_KIOSCO_ENTRAR,
+  RUTA_KIOSCO_MIS_PEDIDOS,
+];
 
 export function Inactividad() {
   const pathname = usePathname();
@@ -37,17 +49,14 @@ function Vigilante() {
   const ultimaSenal = useRef(0);
   const saliendo = useRef(false);
 
-  /** Tira el borrador y recarga el inicio: la pantalla queda como nueva. */
+  /** Cierra el turno (borrador y sesión del cliente) y recarga el inicio: la pantalla queda como nueva. */
   const reiniciar = useCallback(async () => {
     if (saliendo.current) return;
     saliendo.current = true;
     // Si la limpieza falla, igual se vuelve al inicio: dejar al cliente
     // siguiente frente al aviso congelado sería peor que un borrador viejo,
     // que de todos modos se limpia al enviar o a la siguiente inactividad.
-    const respuesta = await llamarKiosco("/borrador", { metodo: "DELETE" });
-    if (respuesta.status !== 200) {
-      console.error("[kiosco] no se pudo limpiar el borrador por inactividad", respuesta.status);
-    }
+    await cerrarTurno("inactividad");
     window.location.assign(RUTA_KIOSCO);
   }, []);
 
@@ -91,7 +100,8 @@ function Vigilante() {
       <div className="lamina w-full max-w-lg p-8 text-center">
         <h2 className="titulo-lamina text-4xl">¿Sigues ahí?</h2>
         <p className="mt-3 text-lg leading-relaxed text-tinta-suave">
-          Si no, borro tu pedido y dejo la pantalla lista para el siguiente cliente en{" "}
+          Si no, borro tu pedido, cierro tu sesión y dejo la pantalla lista para el siguiente
+          cliente en{" "}
           <span className="num-tab font-mono font-bold text-tinta">{restan}</span> s.
         </p>
         <button

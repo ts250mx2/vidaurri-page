@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LockKeyhole, MapPin, Phone } from "lucide-react";
+import { LockKeyhole, MapPin, Phone, UserRound } from "lucide-react";
 import { MarcaAV } from "@/components/LogoAV";
 import { IconWhatsApp } from "@/components/IconWhatsApp";
 import { NEGOCIO, urlWhatsApp, PRELLENADOS } from "@/config/negocio";
@@ -21,6 +21,10 @@ const CLASE_ENLACE =
   "text-white/70 transition-colors duration-150 hover:text-white";
 
 const CLASE_TITULO_COLUMNA = "rotulo-tecnico text-[12px] text-white/60";
+
+/** Enlace de contorno a un área privada (Clientes, Mostrador): sin ámbar. */
+const CLASE_PUERTA =
+  "rotulo-tecnico inline-flex min-h-10 items-center gap-2 rounded-md border border-white/30 px-3.5 text-[11.5px] text-white/85 transition-colors duration-150 hover:border-white hover:text-white";
 
 /** Datos del emisor, tal como se rotulan en el cajetín de un plano. Todos
  *  salen de `negocio.ts` o son afirmaciones firmes del negocio. */
@@ -173,16 +177,26 @@ export async function Footer() {
             © {new Date().getFullYear()} {NEGOCIO.razonSocial} · {NEGOCIO.ciudad} ·
             Todos los derechos reservados.
           </p>
-          {/* Puerta al área privada de los vendedores. Discreta a propósito: es
-              para quien ya sabe que existe, no una llamada a la acción del
-              cliente (por eso sin ámbar). */}
-          <Link
-            href="/mostrador/login"
-            className="rotulo-tecnico inline-flex min-h-10 items-center gap-2 rounded-md border border-white/30 px-3.5 text-[11.5px] text-white/85 transition-colors duration-150 hover:border-white hover:text-white"
-          >
-            <LockKeyhole aria-hidden className="size-3.5" />
-            Mostrador
-          </Link>
+          {/* Puertas a las áreas privadas: la del cliente registrado (celular y
+              contraseña) y la de los vendedores. Discretas a propósito: son
+              para quien ya sabe que existen, no una llamada a la acción del
+              público (por eso sin ámbar). */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/clientes"
+              className={CLASE_PUERTA}
+            >
+              <UserRound aria-hidden className="size-3.5" />
+              Clientes
+            </Link>
+            <Link
+              href="/mostrador/login"
+              className={CLASE_PUERTA}
+            >
+              <LockKeyhole aria-hidden className="size-3.5" />
+              Mostrador
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

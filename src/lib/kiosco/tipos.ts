@@ -1,4 +1,10 @@
-import type { OrigenPartida } from "@/lib/mostrador/tipos";
+import type {
+  EstatusPartida,
+  EstatusPedido,
+  OrigenPartida,
+  SucursalEntrega,
+} from "@/lib/mostrador/tipos";
+import { esSucursalEntrega } from "./identidad";
 
 // Lo ÚNICO que el navegador del kiosco puede ver, y las funciones puras que lo
 // recortan. El mostrador manda a su pantalla el pedido completo de IA; aquí no:
@@ -172,4 +178,144 @@ export function sanearAcuse(valor: unknown): AcuseKiosco | null {
 export function folioValido(valor: unknown): string {
   const folio = typeof valor === "string" ? valor.trim().toUpperCase() : "";
   return /^[A-Z0-9-]{1,20}$/.test(folio) ? folio : "";
+}
+
+// --- Los pedidos del cliente que entró con su celular ----------------------
+//
+// Lo que IA proyecta en `/api/kiosco/cliente/pedidos` y `/pedidos/[folio]`:
+// folio, estatus, fechas, total y piezas; en el detalle, además los renglones
+// y las observaciones. Nada de ids internos, eventos ni datos del POS, y aquí
+// se vuelve a recortar por si el motor un día manda de más.
+
+const ESTATUS_PEDIDO: ReadonlyArray<EstatusPedido> = [
+  "borrador",
+  "enviado",
+  "confirmado",
+  "listo",
+  "entregado",
+  "cancelado",
+];
+const ESTATUS_PARTIDA: ReadonlyArray<EstatusPartida> = [
+  "pendiente",
+  "confirmada",
+  "sin_existencia",
+  "sobre_pedido",
+];
+
+export interface PedidoDeCliente {
+  folio: string;
+  estatus: EstatusPedido;
+  /** 'AAAA-MM-DD HH:MM:SS' tal como lo manda IA; null si no viene. */
+  creadoEn: string | null;
+  enviadoEn: string | null;
+  /** IVA incluido, ya con su descuento. */
+  total: number;
+  piezas: number;
+  /** Clave de sucursal; null si IA mandó una que aquí no existe. */
+  sucursal: SucursalEntrega | null;
+}
+
+export interface PartidaDeCliente {
+  descripcion: string;
+  codigo: string | null;
+  cantidad: number;
+  /** IVA incluido. */
+  precioUnitario: number;
+  importe: number;
+  estatusPartida: EstatusPartida;
+}
+
+export interface DetallePedidoDeCliente extends PedidoDeCliente {
+  partidas: PartidaDeCliente[];
+  observaciones: string | null;
+}
+
+function estatusPedidoDe(valor: unknown): EstatusPedido | null {
+  return ESTATUS_PEDIDO.find((e) => e === valor) ?? null;
+}
+
+function estatusPartidaDe(valor: unknown): EstatusPartida {
+  return ESTATUS_PARTIDA.find((e) => e === valor) ?? "pendiente";
+}
+
+function fechaDe(valor: unknown): string | null {
+  return typeof valor === "string" && valor.trim() ? valor : null;
+}
+
+/** Un pedido de la lista del cliente; null si no trae folio ni estatus reconocible. */
+export function sanearPedidoDeCliente(valor: unknown): PedidoDeCliente | null {
+  if (!esObjeto(valor)) return null;
+  const folio = folioValido(valor.folio);
+  const estatus = estatusPedidoDe(valor.estatus);
+  if (!folio || !estatus) return null;
+  return {
+    folio,
+    estatus,
+    creadoEn: fechaDe(valor.creadoEn),
+    enviadoEn: fechaDe(valor.enviadoEn),
+    total: numero(valor.total),
+    piezas: Math.max(0, entero(valor.piezas) ?? 0),
+    sucursal: esSucursalEntrega(valor.sucursal) ? valor.sucursal : null,
+  };
+}
+
+function sanearPartidaDeCliente(valor: unknown): PartidaDeCliente | null {
+  if (!esObjeto(valor)) return null;
+  const descripcion = texto(valor.descripcion).trim();
+  if (!descripcion) return null;
+  return {
+    descripcion,
+    codigo: typeof valor.codigo === "string" && valor.codigo ? valor.codigo : null,
+    cantidad: Math.max(1, entero(valor.cantidad) ?? 1),
+    precioUnitario: numero(valor.precioUnitario ?? valor.precioConIva),
+    importe: numero(valor.importe),
+    estatusPartida: estatusPartidaDe(valor.estatusPartida),
+  };
+}
+
+/** El detalle de un pedido del cliente: la cabecera más renglones y observaciones. */
+export function sanearDetalleDeCliente(valor: unknown): DetallePedidoDeCliente | null {
+  const cabecera = sanearPedidoDeCliente(valor);
+  if (!cabecera || !esObjeto(valor)) return null;
+  const crudas = Array.isArray(valor.partidas) ? valor.partidas : [];
+  const observaciones = texto(valor.observaciones).trim();
+  return {
+    ...cabecera,
+    partidas: crudas.map(sanearPartidaDeCliente).filter((p): p is PartidaDeCliente => p !== null),
+    observaciones: observaciones || null,
+  };
+}
+
+/**
+ * Lo que `POST /entrar` de IA (clientes y kiosco) devuelve del padrón tras
+ * comprobar celular y contraseña; null si le falta algo. Las dos banderas se
+ * leen a lo más restrictivo si no vienen: sin permiso de pedir y con la
+ * contraseña por cambiar.
+ */
+export interface ClienteDelPadron {
+  idCliente: number;
+  nombre: string;
+  telefono: string;
+  /** Porcentaje 0-100 del padrón. */
+  descuento: number;
+  /** `permitir_pedido` del padrón: sin él el pedido remoto se rechaza al enviar. */
+  permitirPedido: boolean;
+  /** `true` mientras su contraseña siga siendo el celular. */
+  passwordPorDefecto: boolean;
+}
+
+export function sanearClienteDelPadron(valor: unknown): ClienteDelPadron | null {
+  if (!esObjeto(valor)) return null;
+  const idCliente = entero(valor.idCliente);
+  const nombre = texto(valor.nombre).trim();
+  const telefono = texto(valor.telefono).replace(/\D/g, "");
+  if (idCliente === null || idCliente <= 0 || !nombre || telefono.length !== 10) return null;
+  return {
+    idCliente,
+    nombre,
+    telefono,
+    descuento: numero(valor.descuento),
+    permitirPedido: valor.permitirPedido === true,
+    passwordPorDefecto: valor.passwordPorDefecto !== false,
+  };
 }

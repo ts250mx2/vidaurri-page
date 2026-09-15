@@ -3,22 +3,23 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Search } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import { useArea } from "@/components/kiosco/AreaContext";
 import { CLASE_CAMPO_KIOSCO, CLASE_ERROR_KIOSCO } from "@/components/kiosco/estilos";
 import { RenglonPieza, type FaseAgregar } from "@/components/kiosco/RenglonPieza";
 import { Tecla } from "@/components/kiosco/Tecla";
 import {
   arregloDe,
   esOk,
-  kioscoDesactivado,
-  llamarKiosco,
+  llamarArea,
   mensajeFallo,
+  sesionPerdida,
   STATUS_ABORTADA,
 } from "@/lib/kiosco/navegador";
 import type { ArticuloKiosco } from "@/lib/kiosco/tipos";
 import type { CapturaPartida } from "@/lib/mostrador/tipos";
 
-// El buscador del kiosco: lo primero que ve el cliente y lo único que tiene el
-// foco al llegar. Se opera entero con el teclado, sin tocar el ratón:
+// El buscador por nombre o código. En la PC del kiosco se opera entero con el
+// teclado, sin tocar el ratón:
 //
 //   Enter    busca ya (sin esperar el retardo) y salta al primer resultado
 //   ↓ ↑      recorren los resultados (el foco real va al botón del renglón,
@@ -27,7 +28,9 @@ import type { CapturaPartida } from "@/lib/mostrador/tipos";
 //   Escape   limpia la búsqueda y regresa el cursor al campo; con el campo ya
 //            vacío, regresa a Vico, que es la pantalla por default
 //
-// Los atajos se pintan junto a cada acción: el kiosco no tiene manual.
+// Los atajos se pintan junto a cada acción cuando el área tiene teclado (el
+// kiosco no tiene manual); en el celular del cliente no se enseñan, aunque
+// sigan funcionando con un teclado físico.
 
 const DEBOUNCE_MS = 250;
 const MIN_BUSQUEDA = 2;
@@ -48,6 +51,7 @@ export function BuscadorKiosco({
   /** Escape con el campo vacío: de vuelta a Vico, la pantalla por default. */
   onVolverAVico: () => void;
 }) {
+  const area = useArea();
   const [busqueda, setBusqueda] = useState("");
   const [resultados, setResultados] = useState<ArticuloKiosco[]>([]);
   const [buscando, setBuscando] = useState(false);
@@ -72,7 +76,8 @@ export function BuscadorKiosco({
   // anterior se ocultan al derivarlos, sin tener que vaciarlos desde el efecto.
   const visibles = busquedaActiva ? resultados : [];
 
-  // El cliente llega y teclea: el foco es del campo desde el primer instante.
+  // El cliente eligió buscar: el foco es del campo desde el primer instante
+  // (en el celular eso abre el teclado, que es justo lo que quiere).
   useEffect(() => {
     campoRef.current?.focus();
   }, []);
@@ -95,10 +100,10 @@ export function BuscadorKiosco({
       async () => {
         setBuscando(true);
         const parametros = new URLSearchParams({ busqueda: texto });
-        const respuesta = await llamarKiosco(`/articulos?${parametros}`, { signal: control.signal });
+        const respuesta = await llamarArea(area, `/articulos?${parametros}`, { signal: control.signal });
         if (respuesta.status === STATUS_ABORTADA || control.signal.aborted) return;
         setBuscando(false);
-        if (kioscoDesactivado(respuesta.status)) return;
+        if (sesionPerdida(area, respuesta)) return;
         if (!esOk(respuesta.datos)) {
           setError(mensajeFallo(respuesta, ERROR_BUSQUEDA));
           return;
@@ -112,7 +117,7 @@ export function BuscadorKiosco({
       clearTimeout(temporizador);
       control.abort();
     };
-  }, [busquedaActiva, texto, disparo]);
+  }, [area, busquedaActiva, texto, disparo]);
 
   // Enter pedido antes de que llegaran los resultados: en cuanto hay lista, el
   // foco salta al primer renglón y otro Enter lo agrega.
@@ -149,6 +154,14 @@ export function BuscadorKiosco({
     if (evento.key === "Enter") {
       evento.preventDefault();
       if (!busquedaActiva) return;
+      // En el celular, Enter solo busca y cierra el teclado: saltar el foco
+      // al primer renglón lo volvería a abrir sobre un botón.
+      if (!area.conTeclado) {
+        campoRef.current?.blur();
+        sinEspera.current = true;
+        setDisparo((n) => n + 1);
+        return;
+      }
       if (visibles.length > 0 && !buscando) {
         enfocar(0);
         return;
@@ -210,12 +223,15 @@ export function BuscadorKiosco({
       return;
     }
     setFases((previas) => ({ ...previas, [codigo]: "agregado" }));
-    // El botón que se acaba de pulsar se queda inhabilitado mientras dice
-    // "Agregado ✓", y un foco en un botón muerto deja el teclado sin destino:
-    // el cursor vuelve al campo, con lo tecleado seleccionado, que es donde el
-    // cliente va a escribir la siguiente pieza.
-    campoRef.current?.focus();
-    campoRef.current?.select();
+    // En la PC, el botón que se acaba de pulsar se queda inhabilitado mientras
+    // dice "Agregado ✓", y un foco en un botón muerto deja el teclado sin
+    // destino: el cursor vuelve al campo, con lo tecleado seleccionado, que es
+    // donde el cliente va a escribir la siguiente pieza. En el celular no: el
+    // teclado en pantalla taparía la lista que acaba de tocar.
+    if (area.conTeclado) {
+      campoRef.current?.focus();
+      campoRef.current?.select();
+    }
     const temporizador = setTimeout(() => {
       temporizadores.current.delete(temporizador);
       setFases((previas) => ({ ...previas, [codigo]: "libre" }));
@@ -228,14 +244,14 @@ export function BuscadorKiosco({
 
   return (
     <div className="lamina flex h-full flex-col overflow-hidden">
-      <div className="border-b border-linea bg-hoja px-5 py-4">
+      <div className="border-b border-linea bg-hoja px-4 py-3 sm:px-5 sm:py-4">
         <label htmlFor="busqueda-kiosco" className="rotulo-tecnico text-sm text-tinta-suave">
           Busca tu pieza
         </label>
         <div className="relative mt-2">
           <Search
             aria-hidden
-            className="pointer-events-none absolute left-4 top-1/2 size-6 -translate-y-1/2 text-tinta-suave"
+            className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-tinta-suave sm:size-6"
           />
           <input
             id="busqueda-kiosco"
@@ -244,36 +260,39 @@ export function BuscadorKiosco({
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             onKeyDown={alTeclearEnCampo}
-            placeholder="Ej: FACIA VERSA, calavera Aveo o el código de la pieza"
+            placeholder="Ej: FACIA VERSA, calavera Aveo o el código"
             maxLength={BUSQUEDA_MAX}
             autoComplete="off"
             autoCapitalize="characters"
-            className={twMerge(CLASE_CAMPO_KIOSCO, "pl-14")}
+            enterKeyHint="search"
+            className={twMerge(CLASE_CAMPO_KIOSCO, "pl-12 sm:pl-14")}
           />
         </div>
-        <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tinta-suave">
-          <span>
-            <Tecla>Enter</Tecla> busca
-          </span>
-          <span>
-            <Tecla>↓</Tecla> <Tecla>↑</Tecla> recorren los resultados
-          </span>
-          <span>
-            <Tecla>Esc</Tecla> limpia; con el campo vacío, vuelve a Vico
-          </span>
-        </p>
+        {area.conTeclado && (
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tinta-suave">
+            <span>
+              <Tecla>Enter</Tecla> busca
+            </span>
+            <span>
+              <Tecla>↓</Tecla> <Tecla>↑</Tecla> recorren los resultados
+            </span>
+            <span>
+              <Tecla>Esc</Tecla> limpia; con el campo vacío, vuelve a Vico
+            </span>
+          </p>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto bg-hoja">
         {error && (
-          <p role="alert" className={`${CLASE_ERROR_KIOSCO} m-5`}>
+          <p role="alert" className={`${CLASE_ERROR_KIOSCO} m-4 sm:m-5`}>
             {error}
           </p>
         )}
 
         {!busquedaActiva && !error && (
-          <div className="px-6 py-10 text-center">
-            <p className="titulo-lamina text-2xl text-tinta">Escribe qué pieza necesitas</p>
+          <div className="px-5 py-8 text-center sm:px-6 sm:py-10">
+            <p className="titulo-lamina text-xl text-tinta sm:text-2xl">Escribe qué pieza necesitas</p>
             <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-tinta-suave">
               Con el nombre basta: <span className="font-semibold text-tinta">facia</span>,{" "}
               <span className="font-semibold text-tinta">calavera</span>,{" "}
@@ -288,8 +307,8 @@ export function BuscadorKiosco({
         )}
 
         {sinResultados && (
-          <div className="px-6 py-10 text-center">
-            <p className="titulo-lamina text-2xl text-tinta">No encontré nada con ese dato</p>
+          <div className="px-5 py-8 text-center sm:px-6 sm:py-10">
+            <p className="titulo-lamina text-xl text-tinta sm:text-2xl">No encontré nada con ese dato</p>
             <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-tinta-suave">
               Prueba con otras palabras, o pregúntale a Vico aquí abajo: él entiende
               &ldquo;el foco de adelante de un Versa 2016&rdquo;. También te atendemos en el mostrador.
@@ -317,7 +336,7 @@ export function BuscadorKiosco({
                 error={errores[articulo.codigo] ?? null}
                 bloqueado={ocupado || hayAgregando}
                 activo={activo === i}
-                conTeclaEnter
+                conTeclaEnter={area.conTeclado}
                 onFoco={() => setActivo(i)}
                 onAgregar={() => void agregar(articulo)}
               />

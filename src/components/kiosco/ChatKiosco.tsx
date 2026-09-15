@@ -10,24 +10,27 @@ import { NEGOCIO } from "@/config/negocio";
 import {
   arregloDe,
   esOk,
-  kioscoDesactivado,
-  llamarKiosco,
+  llamarArea,
   mensajeFallo,
+  sesionPerdida,
 } from "@/lib/kiosco/navegador";
 import { sanearPedido, type PedidoKiosco, type PiezaDeVico } from "@/lib/kiosco/tipos";
+import { useArea } from "./AreaContext";
 import { CLASE_BOTON_NEUTRO_KIOSCO, CLASE_CAMPO_KIOSCO } from "./estilos";
 import { PiezasDeVico, type AgregarPieza } from "./PiezasDeVico";
 
-// Vico atendiendo al cliente que está PARADO en el mostrador. Es el mismo
-// asistente del chat público y del mostrador, pero con el actor `kiosco` de IA:
-// busca, cotiza a precio de mostrador y agrega al pedido, y NO puede enviarlo
-// —eso es el botón ámbar de la pantalla— ni pedir datos personales.
+// Vico atendiendo al cliente que arma su pedido: parado en el kiosco de la
+// tienda o desde su celular en el área de clientes (el área la dice el
+// contexto; solo cambia a qué proxy se habla). Es el mismo asistente del chat
+// público y del mostrador, pero con un actor que busca, cotiza y agrega al
+// pedido, y NO puede enviarlo —eso es el botón ámbar de la pantalla— ni pedir
+// datos personales.
 //
 // Diferencias con `ChatMostrador`, que es su gemelo: aquí no hay cliente del
-// padrón que elegir (no hay descuentos), el texto de Vico no navega a ninguna
-// parte (en el kiosco no existe "el resto del sitio") y la conversación vive
-// SOLO en memoria: al recargar por inactividad, el siguiente cliente empieza de
-// cero y no ve una palabra de lo que preguntó el anterior.
+// padrón que elegir, el texto de Vico no navega a ninguna parte y la
+// conversación vive SOLO en memoria con una sesión de chat propia: en el
+// kiosco el siguiente cliente empieza de cero; en el área de clientes no se
+// mezcla con la memoria de WhatsApp.
 
 const MAX_MENSAJE = 500;
 /** Un poco por encima de los 115 s del proxy, que ya responde con error legible. */
@@ -45,11 +48,16 @@ interface Mensaje {
   falla?: string;
 }
 
-const SALUDO: Mensaje = {
-  rol: "vico",
-  texto:
-    "Dime qué pieza buscas y de qué carro es, aunque no sepas cómo se llama. Por ejemplo: *el foco de adelante de un Versa 2016*.",
-};
+const TEXTO_SALUDO =
+  "Dime qué pieza buscas y de qué carro es, aunque no sepas cómo se llama. Por ejemplo: *el foco de adelante de un Versa 2016*.";
+
+/** Con cliente del padrón, Vico saluda por su nombre: el pedido ya es suyo. */
+function saludoPara(nombreCliente: string | null): Mensaje {
+  return {
+    rol: "vico",
+    texto: nombreCliente ? `Hola, *${nombreCliente}*. ${TEXTO_SALUDO}` : TEXTO_SALUDO,
+  };
+}
 
 function idAleatorio(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -68,14 +76,18 @@ function fotosDe(datos: Record<string, unknown> | null): FotoChat[] {
 }
 
 export function ChatKiosco({
+  nombreCliente = null,
   onPedido,
   onAgregar,
 }: {
+  /** Nombre del cliente del padrón que entró; null = público general. */
+  nombreCliente?: string | null;
   /** Borrador tal como quedó tras el turno (Vico sí puede agregar piezas). */
   onPedido: (pedido: PedidoKiosco | null) => void;
   onAgregar: AgregarPieza;
 }) {
-  const [mensajes, setMensajes] = useState<Mensaje[]>([SALUDO]);
+  const area = useArea();
+  const [mensajes, setMensajes] = useState<Mensaje[]>([saludoPara(nombreCliente)]);
   const [entrada, setEntrada] = useState("");
   const [enviando, setEnviando] = useState(false);
   const sesionRef = useRef<string | null>(null);
@@ -84,10 +96,12 @@ export function ChatKiosco({
   const finRef = useRef<HTMLDivElement>(null);
   const entradaRef = useRef<HTMLInputElement>(null);
 
-  // El chat se abre con el cursor listo: el cliente ya venía tecleando.
+  // En la PC del kiosco el chat se abre con el cursor listo: el cliente ya
+  // venía tecleando. En el celular no: enfocar abriría el teclado y taparía
+  // el saludo antes de leerlo.
   useEffect(() => {
-    entradaRef.current?.focus();
-  }, []);
+    if (area.conTeclado) entradaRef.current?.focus();
+  }, [area.conTeclado]);
 
   useEffect(() => {
     finRef.current?.scrollIntoView({ block: "end" });
@@ -103,14 +117,14 @@ export function ChatKiosco({
       setMensajes((m) => [...m, { rol: "cliente", texto: mensaje }]);
       sesionRef.current ??= idAleatorio();
 
-      const respuesta = await llamarKiosco("/vico", {
+      const respuesta = await llamarArea(area, "/vico", {
         cuerpo: { sesion: sesionRef.current, mensaje, reiniciar: reiniciarRef.current },
         signal: AbortSignal.timeout(TIEMPO_MAXIMO_MS),
       });
       reiniciarRef.current = false;
       enviandoRef.current = false;
       setEnviando(false);
-      if (kioscoDesactivado(respuesta.status)) return;
+      if (sesionPerdida(area, respuesta)) return;
 
       const { status, datos } = respuesta;
       const textoVico = typeof datos?.respuesta === "string" ? datos.respuesta : "";
@@ -120,13 +134,13 @@ export function ChatKiosco({
           { rol: "vico", texto: textoVico, fotos: fotosDe(datos), piezas: piezasDe(datos) },
         ]);
         // `pedido` solo viene cuando Vico tocó el borrador; si no lo mandó, la
-        // tarjeta de la derecha se queda como está (no se vacía por omisión).
+        // tarjeta del pedido se queda como está (no se vacía por omisión).
         if (datos !== null && "pedido" in datos) onPedido(sanearPedido(datos.pedido));
         return;
       }
 
       const saturado = status === 429;
-      console.error("[kiosco] Vico no respondió", status, mensajeFallo(respuesta, TEXTO_SIN_RESPUESTA));
+      console.error(`[${area.area}] Vico no respondió`, status, mensajeFallo(respuesta, TEXTO_SIN_RESPUESTA));
       setMensajes((m) => [
         ...m,
         {
@@ -136,13 +150,13 @@ export function ChatKiosco({
         },
       ]);
     },
-    [onPedido]
+    [area, onPedido]
   );
 
   function reiniciar() {
     reiniciarRef.current = true;
     sesionRef.current = null;
-    setMensajes([SALUDO]);
+    setMensajes([saludoPara(nombreCliente)]);
     setEntrada("");
     entradaRef.current?.focus();
   }
@@ -160,7 +174,7 @@ export function ChatKiosco({
 
   return (
     <div className="lamina flex h-full flex-col overflow-hidden">
-      <div className="flex items-center gap-3 border-b border-linea bg-hoja px-5 py-3">
+      <div className="flex items-center gap-3 border-b border-linea bg-hoja px-4 py-3 sm:px-5">
         <LogoAV lado={34} />
         <div className="min-w-0">
           <p className="rotulo-tecnico truncate text-base text-tinta">
@@ -179,14 +193,14 @@ export function ChatKiosco({
             disabled={enviando}
             aria-label="Empezar una conversación nueva"
             title="Empezar una conversación nueva"
-            className={twMerge(CLASE_BOTON_NEUTRO_KIOSCO, "size-11 px-0")}
+            className={twMerge(CLASE_BOTON_NEUTRO_KIOSCO, "size-11 px-0 sm:size-11 sm:px-0")}
           >
             <RotateCcw aria-hidden className="size-4" />
           </button>
         </div>
       </div>
 
-      <div aria-live="polite" className="flex-1 space-y-3 overflow-y-auto bg-papel px-5 py-4">
+      <div aria-live="polite" className="flex-1 space-y-3 overflow-y-auto bg-papel px-3 py-4 sm:px-5">
         {mensajes.map((m, i) => {
           const esVico = m.rol === "vico";
           return (
@@ -205,8 +219,8 @@ export function ChatKiosco({
                   {m.falla}
                 </p>
               )}
-              {/* En el kiosco no hay a dónde ir: los nombres de pieza que Vico
-                  enlaza se quedan quietos y la pieza se agrega con su botón. */}
+              {/* Aquí no hay a dónde ir: los nombres de pieza que Vico enlaza
+                  se quedan quietos y la pieza se agrega con su botón. */}
               <TextoVico texto={m.texto} fotos={m.fotos} alNavegar={() => undefined} />
               {m.piezas && m.piezas.length > 0 && (
                 <PiezasDeVico piezas={m.piezas} ocupado={enviando} onAgregar={onAgregar} />
@@ -227,9 +241,9 @@ export function ChatKiosco({
           e.preventDefault();
           void enviar(entrada);
         }}
-        className="border-t border-linea bg-hoja px-4 py-3"
+        className="border-t border-linea bg-hoja px-3 py-3 sm:px-4"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <input
             ref={entradaRef}
             type="text"
@@ -246,7 +260,7 @@ export function ChatKiosco({
             type="submit"
             disabled={enviando || !entrada.trim()}
             aria-label="Preguntar"
-            className="flex size-16 shrink-0 items-center justify-center rounded-lg bg-plano text-white transition-colors duration-150 hover:bg-plano-claro disabled:cursor-not-allowed disabled:opacity-45"
+            className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-plano text-white transition-colors duration-150 hover:bg-plano-claro disabled:cursor-not-allowed disabled:opacity-45 sm:size-16"
           >
             <Send aria-hidden className="size-6" />
           </button>

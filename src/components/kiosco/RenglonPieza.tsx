@@ -8,14 +8,15 @@ import { pesos } from "@/lib/formato";
 import { CLASE_BOTON_PLANO_KIOSCO } from "./estilos";
 import { Tecla } from "./Tecla";
 
-// El renglón de una pieza en el kiosco: foto real, descripción grande, código,
-// precio con IVA, el sello de existencia y UN botón para agregarla. Lo comparten
-// el buscador y las piezas que Vico consultó, para que agregar se haga siempre
+// El renglón de una pieza: foto real, descripción grande, código, precio con
+// IVA, el sello de existencia y UN botón para agregarla. Lo comparten el
+// buscador y las piezas que Vico consultó, para que agregar se haga siempre
 // igual, se haya llegado por el nombre o por la conversación.
 //
-// La existencia aquí es un SÍ o un NO ("En existencia" / "Sobre pedido"): la
-// cifra exacta del anaquel no sale de bdav ni llega a esta pantalla, que está
-// a la vista de cualquiera que pase por el mostrador.
+// Móvil primero: a 390 px el botón baja debajo del texto y ocupa el ancho
+// entero (un pulgar lo acierta); desde `sm` se pone a la derecha como en el
+// kiosco. La existencia aquí es un SÍ o un NO ("En existencia" / "Sobre
+// pedido"): la cifra exacta del anaquel no llega a esta pantalla.
 
 export type FaseAgregar = "libre" | "agregando" | "agregado";
 
@@ -69,21 +70,23 @@ export const RenglonPieza = forwardRef<HTMLButtonElement, PropsRenglonPieza>(
     return (
       <li
         className={clsx(
-          "flex items-center gap-4 border-l-4 px-4 py-3 transition-colors duration-150",
+          "grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2.5 border-l-4 px-3 py-3 transition-colors duration-150 sm:grid-cols-[auto_1fr_auto] sm:gap-4 sm:px-4",
           activo ? "border-l-ambar bg-papel" : "border-l-transparent"
         )}
       >
         <FotoPieza
           src={foto ?? `/api/foto?codigo=${encodeURIComponent(codigo)}`}
           alt={descripcion}
-          className="mesa-dibujo size-24 shrink-0 overflow-hidden rounded-md border border-linea"
+          className="mesa-dibujo size-20 shrink-0 overflow-hidden rounded-md border border-linea sm:size-24"
           imgClassName="size-full object-contain"
         />
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-lg font-semibold leading-snug text-tinta">{descripcion}</p>
+        <div className="min-w-0">
+          <p className="line-clamp-2 text-base font-semibold leading-snug text-tinta sm:text-lg">
+            {descripcion}
+          </p>
           <p className="num-tab mt-1 font-mono text-sm text-tinta-suave">{codigo}</p>
-          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span className="num-tab titulo-lamina font-mono text-xl text-tinta">
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 sm:mt-2">
+            <span className="num-tab titulo-lamina font-mono text-lg text-tinta sm:text-xl">
               {pesos(precioConIva)}
             </span>
             <span className="text-xs text-tinta-suave">IVA incluido</span>
@@ -99,7 +102,7 @@ export const RenglonPieza = forwardRef<HTMLButtonElement, PropsRenglonPieza>(
             </p>
           )}
         </div>
-        <div className="flex shrink-0 flex-col items-center gap-1.5">
+        <div className="col-span-2 flex flex-col items-stretch gap-1.5 sm:col-span-1 sm:items-center">
           <button
             ref={ref}
             type="button"
@@ -109,14 +112,14 @@ export const RenglonPieza = forwardRef<HTMLButtonElement, PropsRenglonPieza>(
             aria-label={`Agregar ${descripcion} a tu pedido`}
             className={twMerge(
               CLASE_BOTON_PLANO_KIOSCO,
-              "w-40",
+              "w-full sm:w-40",
               agregado && "bg-existencia hover:bg-existencia disabled:opacity-100"
             )}
           >
             {textoDelBoton(fase)}
           </button>
           {conTeclaEnter && !agregado && (
-            <span className="text-[11px] text-tinta-suave">
+            <span className="hidden text-[11px] text-tinta-suave sm:inline">
               <Tecla>Enter</Tecla> para agregar
             </span>
           )}

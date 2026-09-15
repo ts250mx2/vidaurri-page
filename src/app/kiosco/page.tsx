@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { obtenerBorradorKiosco } from "@/lib/kiosco/datos";
 import { RUTA_KIOSCO_ACTIVAR } from "@/lib/kiosco/rutas";
-import { sesionKiosco } from "@/lib/kiosco/sesion";
+import { sesionClienteKiosco, sesionKiosco } from "@/lib/kiosco/sesion";
 import type { PedidoKiosco } from "@/lib/kiosco/tipos";
 import { ArmarPedido } from "./ArmarPedido";
 
@@ -21,6 +21,9 @@ export const dynamic = "force-dynamic";
 export default async function PaginaKiosco() {
   const sesion = await sesionKiosco();
   if (!sesion) redirect(RUTA_KIOSCO_ACTIVAR);
+  // Si el cliente entró con su celular, Vico lo saluda por su nombre y la
+  // tarjeta del pedido dice a nombre de quién va. Solo baja el nombre.
+  const cliente = await sesionClienteKiosco();
 
   let borrador: PedidoKiosco | null = null;
   let errorInicial: string | null = null;
@@ -42,6 +45,7 @@ export default async function PaginaKiosco() {
       borradorInicial={borrador}
       errorInicial={errorInicial}
       sucursal={sesion.sucursal}
+      nombreCliente={cliente?.nombre ?? null}
     />
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect, unstable_rethrow } from "next/navigation";
-import { ChevronLeft, ChevronRight, PackageOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileSpreadsheet, PackageOpen } from "lucide-react";
 import { listarPedidos, type PaginaPedidosMostrador } from "@/lib/mostrador/datos";
 import { rangoFechasLegible } from "@/lib/mostrador/etiquetas";
 import { conFechasPorDefecto, fechaMonterrey, filtrosDeQuery, rangoMesEnCurso } from "@/lib/mostrador/filtros";
@@ -83,6 +83,18 @@ function rangoMesVecino(iso: string | undefined, delta: number): Rango | null {
 function urlRango(rango: Rango): string {
   return `${RUTA_BACKORDERS}?desde=${rango.desde}&hasta=${rango.hasta}`;
 }
+
+/** El .xlsx del mismo rango que se está viendo (`exportar/route.ts`). */
+function urlExcel(rango: Partial<Rango>): string {
+  const qs = new URLSearchParams();
+  if (rango.desde) qs.set("desde", rango.desde);
+  if (rango.hasta) qs.set("hasta", rango.hasta);
+  const texto = qs.toString();
+  return `${RUTA_BACKORDERS}/exportar${texto ? `?${texto}` : ""}`;
+}
+
+const CLASE_EXPORTAR =
+  "inline-flex h-10 items-center gap-2 rounded-md border border-linea bg-hoja px-3 text-sm font-semibold text-tinta transition-colors duration-150 hover:border-tinta hover:bg-plano hover:text-white";
 
 const CLASE_FLECHA =
   "inline-flex size-10 items-center justify-center rounded-md border border-linea bg-hoja text-tinta transition-colors duration-150 hover:border-tinta hover:bg-plano hover:text-white";
@@ -197,7 +209,16 @@ export default async function PaginaBackorders({
           <h1 className="titulo-lamina mt-1 text-3xl sm:text-4xl">Back orders</h1>
           <p className="mt-1 text-sm text-tinta-suave">Lo que se le tiene pedido a Aldo Autopartes.</p>
         </div>
-        <NavegacionMes desde={desde} hasta={hasta} hoy={hoy} />
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Un <a> y no <Link>: es una descarga, no una pantalla que prefetchear. */}
+          {pedidos.length > 0 && (
+            <a href={urlExcel({ desde, hasta })} className={CLASE_EXPORTAR}>
+              <FileSpreadsheet aria-hidden className="size-4" />
+              Exportar a Excel
+            </a>
+          )}
+          <NavegacionMes desde={desde} hasta={hasta} hoy={hoy} />
+        </div>
       </div>
 
       {error && (

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
+  ImagePlus,
   MessageSquareText,
   Phone,
   RotateCcw,
@@ -18,6 +19,7 @@ import { LogoAV } from "@/components/LogoAV";
 import { IconWhatsApp } from "@/components/IconWhatsApp";
 import { EVENTO_ABRIR_CHAT } from "@/components/BotonCotizar";
 import { TextoVico, destinoPieza } from "@/components/chat/TextoVico";
+import { prepararFoto, type FotoLista } from "@/components/chat/foto-cliente";
 import { NEGOCIO, urlWhatsApp, PRELLENADOS } from "@/config/negocio";
 
 // Chat "Vico": el Vendedor IA de Vidaurri en la web. Habla con el MISMO
@@ -34,6 +36,8 @@ interface Mensaje {
   rol: "vico" | "cliente";
   texto: string;
   fotos?: Array<{ codigo: string; url: string }>;
+  /** Miniatura de la foto que mandó el cliente (la completa no se guarda). */
+  adjunta?: string;
   /** Rótulo de la falla (tinta de anotación). Ausente = mensaje normal. */
   falla?: string;
 }
@@ -53,6 +57,10 @@ export function ChatVico() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([SALUDO]);
   const [entrada, setEntrada] = useState("");
   const [enviando, setEnviando] = useState(false);
+  /** Foto adjunta que saldrá con el siguiente mensaje, y el aviso si no se pudo abrir. */
+  const [foto, setFoto] = useState<FotoLista | null>(null);
+  const [avisoFoto, setAvisoFoto] = useState<string | null>(null);
+  const archivoRef = useRef<HTMLInputElement>(null);
   const [pill, setPill] = useState(false);
   /** Foto ampliada: las fotos del mensaje donde se dio clic y cuál se ve.
    *  La navegación se queda DENTRO del mensaje a propósito: cada respuesta de
@@ -100,13 +108,15 @@ export function ChatVico() {
     finRef.current?.scrollIntoView({ block: "end" });
   }, [mensajes]);
 
-  const enviar = useCallback(async (texto: string) => {
+  const enviar = useCallback(async (texto: string, adjunta: FotoLista | null = null) => {
     const mensaje = texto.trim();
-    if (!mensaje || enviandoRef.current) return;
+    if ((!mensaje && !adjunta) || enviandoRef.current) return;
     enviandoRef.current = true;
     setEnviando(true);
     setEntrada("");
-    setMensajes((m) => [...m, { rol: "cliente", texto: mensaje }]);
+    setFoto(null);
+    setAvisoFoto(null);
+    setMensajes((m) => [...m, { rol: "cliente", texto: mensaje, adjunta: adjunta?.miniatura }]);
 
     try {
       const res = await fetch("/api/chat", {
@@ -115,6 +125,7 @@ export function ChatVico() {
         body: JSON.stringify({
           sesion: localStorage.getItem(CLAVE_SESION) ?? undefined,
           mensaje,
+          imagen: adjunta?.dataUrl,
           reiniciar: reiniciarRef.current,
         }),
       });
@@ -206,8 +217,37 @@ export function ChatVico() {
     return () => window.removeEventListener("keydown", alTeclear);
   }, [ampliada]);
 
+  function alElegirFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0];
+    e.target.value = ""; // permite volver a elegir la misma foto
+    if (archivo) void cargarFoto(archivo);
+  }
+
+  /** Ctrl+V con una imagen en el portapapeles (una captura, una foto copiada
+   *  de WhatsApp Web) la adjunta igual que el botón. Si lo pegado es texto no
+   *  se toca nada: sigue su camino normal al input. */
+  function alPegar(e: React.ClipboardEvent) {
+    const archivo = Array.from(e.clipboardData.files).find((f) => f.type.startsWith("image/"));
+    if (!archivo || enviando) return;
+    e.preventDefault();
+    void cargarFoto(archivo);
+  }
+
+  async function cargarFoto(archivo: File) {
+    try {
+      setFoto(await prepararFoto(archivo));
+      setAvisoFoto(null);
+      inputRef.current?.focus();
+    } catch {
+      setFoto(null);
+      setAvisoFoto("No pude abrir esa foto. Prueba con otra o tómala de nuevo.");
+    }
+  }
+
   function reiniciar() {
     reiniciarRef.current = true;
+    setFoto(null);
+    setAvisoFoto(null);
     setMensajes([SALUDO]);
     setAmpliada(null);
   }
@@ -329,6 +369,14 @@ export function ChatVico() {
                       {m.falla}
                     </p>
                   )}
+                  {m.adjunta && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={m.adjunta}
+                      alt="Foto que enviaste"
+                      className={clsx("max-h-40 rounded-sm border border-white/30", m.texto && "mb-1.5")}
+                    />
+                  )}
                   <TextoVico
                     texto={m.texto}
                     fotos={m.fotos}
@@ -370,24 +418,68 @@ export function ChatVico() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void enviar(entrada);
+              void enviar(entrada, foto);
             }}
+            onPaste={alPegar}
             className="border-t border-linea bg-hoja px-3 py-2.5"
           >
+            {foto && (
+              <div className="mb-2 flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={foto.miniatura}
+                  alt="Foto lista para enviar"
+                  className="size-14 rounded-sm border border-linea object-cover"
+                />
+                <span className="text-[12px] text-tinta-suave">Foto lista. Escribe para qué carro es, o envíala así.</span>
+                <button
+                  type="button"
+                  onClick={() => setFoto(null)}
+                  aria-label="Quitar la foto"
+                  className="ml-auto flex size-9 items-center justify-center rounded-md text-tinta-suave transition-colors duration-150 hover:bg-papel hover:text-tinta"
+                >
+                  <X aria-hidden className="size-4" />
+                </button>
+              </div>
+            )}
+            {avisoFoto && (
+              <p role="alert" className="mb-2 text-[12px] text-anotacion">
+                {avisoFoto}
+              </p>
+            )}
             <div className="flex items-center gap-2">
+              <input
+                ref={archivoRef}
+                type="file"
+                accept="image/*"
+                onChange={alElegirFoto}
+                className="hidden"
+                tabIndex={-1}
+                aria-hidden
+              />
+              <button
+                type="button"
+                onClick={() => archivoRef.current?.click()}
+                disabled={enviando}
+                aria-label="Adjuntar una foto de la pieza"
+                title="Mandar una foto de la pieza (también puedes pegarla con Ctrl+V)"
+                className="flex size-11 shrink-0 items-center justify-center rounded-md border border-linea bg-papel text-tinta transition-colors duration-150 hover:border-linea-fuerte disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <ImagePlus aria-hidden className="size-5" />
+              </button>
               <input
                 ref={inputRef}
                 type="text"
                 value={entrada}
                 onChange={(e) => setEntrada(e.target.value)}
-                placeholder="Ej: cofre Aveo 2012"
+                placeholder={foto ? "¿Para qué carro es?" : "Ej: cofre Aveo 2012"}
                 aria-label="Escribe tu mensaje para Vico"
                 maxLength={2000}
                 className="h-11 flex-1 rounded-md border border-linea bg-papel px-3 text-base text-tinta placeholder:text-tinta-suave"
               />
               <button
                 type="submit"
-                disabled={enviando || !entrada.trim()}
+                disabled={enviando || (!entrada.trim() && !foto)}
                 aria-label="Enviar mensaje"
                 className="flex size-11 shrink-0 items-center justify-center rounded-md bg-ambar text-plano-hondo transition-colors duration-150 hover:bg-ambar-press disabled:cursor-not-allowed disabled:opacity-45"
               >

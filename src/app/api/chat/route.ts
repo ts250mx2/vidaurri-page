@@ -4,6 +4,8 @@
 // "telefono" (clave de conversacion) en el webservice; se genera numerica con
 // prefijo 77 para no chocar con telefonos reales.
 
+import { leerFotoDelChat } from "@/lib/chat/foto-chat";
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
@@ -55,7 +57,8 @@ export async function POST(request: Request) {
     );
   }
 
-  let cuerpo: { sesion?: string; mensaje?: string; reiniciar?: boolean };
+  // `imagen`: la foto que adjuntó el visitante, como data-URL ya reducida.
+  let cuerpo: { sesion?: string; mensaje?: string; reiniciar?: boolean; imagen?: unknown };
   try {
     cuerpo = await request.json();
   } catch {
@@ -63,7 +66,10 @@ export async function POST(request: Request) {
   }
 
   const mensaje = String(cuerpo.mensaje ?? "").trim().slice(0, MAX_MENSAJE);
-  if (!mensaje) {
+  const foto = leerFotoDelChat(cuerpo.imagen);
+  if (!foto.ok) return Response.json({ ok: false, error: foto.error }, { status: 400 });
+  // Una foto sola también es un mensaje.
+  if (!mensaje && !foto.base64) {
     return Response.json({ ok: false, error: "Falta el mensaje" }, { status: 400 });
   }
   const sesion = SESION_VALIDA.test(String(cuerpo.sesion ?? ""))
@@ -78,6 +84,7 @@ export async function POST(request: Request) {
         telefono: sesion,
         mensaje,
         reiniciar: cuerpo.reiniciar === true,
+        ...(foto.base64 ? { imagenes: [{ base64: foto.base64 }] } : {}),
       }),
       signal: AbortSignal.timeout(118_000),
     });
@@ -90,6 +97,8 @@ export async function POST(request: Request) {
     } | null;
 
     if (!res.ok || !datos?.ok) {
+      // Sin esto el 502 sale mudo en la consola y no se sabe si falló IA o algo detrás de ella.
+      console.error("El Vendedor IA no respondió bien:", res.status, datos?.error ?? "(sin JSON)");
       const estado = res.status === 429 ? 429 : 502;
       return Response.json(
         {

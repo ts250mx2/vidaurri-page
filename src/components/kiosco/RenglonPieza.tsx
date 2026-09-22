@@ -5,6 +5,7 @@ import { twMerge } from "tailwind-merge";
 import clsx from "clsx";
 import { FotoPieza } from "@/components/FotoPieza";
 import { pesos } from "@/lib/formato";
+import { urlFotoNueva } from "@/lib/fotos";
 import { CLASE_BOTON_PLANO_KIOSCO } from "./estilos";
 import { Tecla } from "./Tecla";
 
@@ -29,7 +30,7 @@ export interface PropsRenglonPieza {
   descripcion: string;
   precioConIva: number;
   hayEnTienda: boolean;
-  /** Foto ya sellada que mandó IA; sin ella se pide por código al proxy público. */
+  /** URL de la foto (la sellada que mandó Vico, o la del archivo del buscador); sin ella se pide por código al proxy público. */
   foto?: string | null;
   fase: FaseAgregar;
   bloqueado: boolean;
@@ -75,7 +76,7 @@ export const RenglonPieza = forwardRef<HTMLButtonElement, PropsRenglonPieza>(
         )}
       >
         <FotoPieza
-          src={foto ?? `/api/foto?codigo=${encodeURIComponent(codigo)}`}
+          src={foto ?? urlFotoNueva(codigo)}
           alt={descripcion}
           className="mesa-dibujo size-20 shrink-0 overflow-hidden rounded-md border border-linea sm:size-24"
           imgClassName="size-full object-contain"

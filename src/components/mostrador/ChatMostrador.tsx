@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { RotateCcw, Send, TriangleAlert } from "lucide-react";
+import { RotateCcw, Send, TriangleAlert, X } from "lucide-react";
 import clsx from "clsx";
-import { LogoAV } from "@/components/LogoAV";
+import { AvatarChat } from "@/components/chat/AvatarChat";
 import { TextoVico, type FotoChat } from "@/components/chat/TextoVico";
 import { CLASE_BOTON_SECUNDARIO, CLASE_CAMPO } from "@/components/mostrador/estilos";
 import { ProductosDeVico, type AgregarDeVico } from "@/components/mostrador/ProductosDeVico";
@@ -23,8 +23,11 @@ import {
   type SucursalEntrega,
 } from "@/lib/mostrador/tipos";
 
-// Vico en modo vendedor, INLINE en /mostrador/nuevo (no flota: aquí es la
-// herramienta de trabajo, no una invitación). Habla con /api/mostrador/vico
+// Vico en modo vendedor, en /mostrador/nuevo. El hilo es el mismo esté
+// flotando (`VicoFlotante`, abajo a la izquierda como en el sitio público) o
+// inline: este componente solo pinta el chat y llena el alto que le den
+// (`className`); quién lo abre y lo cierra es asunto del padre, que manda
+// `onCerrar` cuando hay a dónde cerrar. Habla con /api/mostrador/vico
 // de PAGE, que reenvía a IA con la cookie del vendedor. El cliente que se
 // atiende NO lo decide el modelo: PAGE manda `idCliente` en cada turno y el
 // servidor cotiza con ese descuento. Cada respuesta trae el borrador tal
@@ -50,6 +53,10 @@ export interface PropsChatMostrador {
   onPedido: (pedido: PedidoDetalle | null) => void;
   /** "Agregar al pedido" de un renglón; null si quedó, si no el texto del fallo. */
   onAgregar: AgregarDeVico;
+  /** Alto y bordes del contenedor; sin él, la lámina inline de siempre. */
+  className?: string;
+  /** Cerrar el chat (solo cuando flota); sin él no se pinta la X. */
+  onCerrar?: () => void;
 }
 
 /** Id de sesión de la pestaña. SIN el prefijo 77 del chat público: ese es un
@@ -124,7 +131,7 @@ function productosDe(datos: Parameters<typeof arregloDe>[0]): ProductoMencionado
     .slice(0, MAX_PRODUCTOS);
 }
 
-export function ChatMostrador({ idCliente, sucursal, onPedido, onAgregar }: PropsChatMostrador) {
+export function ChatMostrador({ idCliente, sucursal, onPedido, onAgregar, className, onCerrar }: PropsChatMostrador) {
   const [mensajes, setMensajes] = useState<Mensaje[]>([SALUDO]);
   const [entrada, setEntrada] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -202,9 +209,14 @@ export function ChatMostrador({ idCliente, sucursal, onPedido, onAgregar }: Prop
   }
 
   return (
-    <div className="lamina flex h-[70vh] flex-col overflow-hidden lg:h-[calc(100vh-13rem)] lg:min-h-[560px]">
+    <div
+      className={clsx(
+        "flex flex-col overflow-hidden",
+        className ?? "lamina h-[70vh] lg:h-[calc(100vh-13rem)] lg:min-h-[560px]"
+      )}
+    >
       <div className="flex items-center gap-2.5 border-b border-linea bg-hoja px-4 py-3">
-        <LogoAV lado={30} />
+        <AvatarChat lado={36} className="ring-2 ring-ambar" />
         <div className="min-w-0">
           <p className="rotulo-tecnico truncate text-sm text-tinta">{NEGOCIO.asistente}</p>
           <p className="truncate text-[11.5px] text-tinta-suave">
@@ -221,6 +233,17 @@ export function ChatMostrador({ idCliente, sucursal, onPedido, onAgregar }: Prop
           <RotateCcw aria-hidden className="size-3.5" />
           Nueva conversación
         </button>
+        {onCerrar && (
+          <button
+            type="button"
+            onClick={onCerrar}
+            aria-label="Cerrar el chat"
+            title="Cerrar (la conversación se conserva)"
+            className="-mr-2 flex size-10 items-center justify-center rounded-md text-tinta-suave transition-colors duration-150 hover:bg-papel hover:text-tinta"
+          >
+            <X aria-hidden className="size-5" />
+          </button>
+        )}
       </div>
 
       <div aria-live="polite" className="flex-1 space-y-3 overflow-y-auto bg-papel px-4 py-4">

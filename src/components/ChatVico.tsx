@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ImagePlus,
-  MessageSquareText,
   Phone,
   RotateCcw,
   Send,
@@ -15,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import clsx from "clsx";
-import { LogoAV } from "@/components/LogoAV";
+import { AvatarChat } from "@/components/chat/AvatarChat";
 import { IconWhatsApp } from "@/components/IconWhatsApp";
 import { EVENTO_ABRIR_CHAT } from "@/components/BotonCotizar";
 import { TextoVico, destinoPieza } from "@/components/chat/TextoVico";
@@ -30,7 +29,9 @@ import { NEGOCIO, urlWhatsApp, PRELLENADOS } from "@/config/negocio";
 // se lee sobre papel, lo que dice Vico va en lámina blanca con borde de línea
 // y lo que escribe el cliente en tinta de plano. Las fallas se anotan en rojo,
 // como la corrección del ajustador. El lanzador flotante es azul con anillo
-// ámbar: nunca verde, para que jamás se confunda con WhatsApp.
+// ámbar: nunca verde, para que jamás se confunda con WhatsApp. Vive en la
+// esquina inferior derecha y el lanzador es la cara de Vico: el agente en la
+// esquina, el mismo que en /mostrador/nuevo.
 
 interface Mensaje {
   rol: "vico" | "cliente";
@@ -264,20 +265,24 @@ export function ChatVico() {
   return (
     <>
       {/* Lanzador flotante: solo desktop (en movil vive en la barra inferior). */}
-      <div className="fixed bottom-6 right-6 z-40 hidden items-center gap-3 md:flex">
+      <div className="fixed bottom-6 right-6 z-40 hidden flex-row-reverse items-center gap-3 md:flex">
+        <button
+          type="button"
+          onClick={() => setAbierto((v) => !v)}
+          aria-label={abierto ? "Cerrar chat con Vico" : "Abrir chat con Vico"}
+          className="flex size-14 items-center justify-center rounded-full bg-plano shadow-flotante ring-2 ring-ambar transition-transform duration-150 hover:scale-105 active:scale-100"
+        >
+          {abierto ? (
+            <X aria-hidden className="size-6 text-white" />
+          ) : (
+            <AvatarChat lado={56} />
+          )}
+        </button>
         {pill && !abierto && (
           <span className="rounded-md border border-linea bg-hoja px-3.5 py-2 text-sm font-semibold text-tinta shadow-lamina-alta">
             ¿Qué pieza buscas? Cotiza aquí
           </span>
         )}
-        <button
-          type="button"
-          onClick={() => setAbierto((v) => !v)}
-          aria-label={abierto ? "Cerrar chat con Vico" : "Abrir chat con Vico"}
-          className="flex size-14 items-center justify-center rounded-full bg-plano text-white shadow-flotante ring-2 ring-ambar transition-transform duration-150 hover:scale-105 active:scale-100"
-        >
-          <MessageSquareText aria-hidden className="size-6" />
-        </button>
       </div>
 
       {abierto && (
@@ -286,14 +291,14 @@ export function ChatVico() {
           aria-label={`Chat con ${NEGOCIO.asistente}, asistente IA de Autopartes Vidaurri`}
           className={clsx(
             "fixed inset-0 z-50 flex flex-col bg-papel",
-            "md:inset-auto md:bottom-6 md:right-6 md:h-[620px] md:max-h-[calc(100vh-4rem)]",
+            "md:inset-auto md:bottom-24 md:right-6 md:h-[620px] md:max-h-[calc(100vh-8rem)]",
             "md:w-[390px] md:overflow-hidden md:rounded-lg md:border md:border-linea-fuerte md:shadow-flotante"
           )}
         >
           {/* Encabezado en campo azul: IA visible + salida humana permanente. */}
           <div className="sobre-plano border-b-4 border-ambar bg-plano px-4 py-3 text-white">
             <div className="flex items-center gap-2.5">
-              <LogoAV lado={34} />
+              <AvatarChat lado={40} className="ring-2 ring-ambar" />
               <div className="min-w-0">
                 <p className="rotulo-tecnico truncate text-sm">
                   {NEGOCIO.asistente} · Autopartes Vidaurri

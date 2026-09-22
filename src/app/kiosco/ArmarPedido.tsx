@@ -2,14 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  ChevronRight,
-  MessageCircleQuestion,
-  ReceiptText,
-  Search,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, ChevronRight, MessageCircleQuestion, ReceiptText, type LucideIcon } from "lucide-react";
+import { VicoFlotante } from "@/components/chat/VicoFlotante";
 import { useArea } from "@/components/kiosco/AreaContext";
 import { ChatKiosco } from "@/components/kiosco/ChatKiosco";
 import { CLASE_BOTON_AMBAR_KIOSCO, CLASE_ERROR_KIOSCO } from "@/components/kiosco/estilos";
@@ -30,25 +24,25 @@ import { BuscadorKiosco } from "./BuscadorKiosco";
 import { PedidoKiosco } from "./PedidoKiosco";
 
 // El armado del pedido, la misma pantalla en el kiosco de la tienda y en el
-// área de clientes (el área la dice el contexto). Una sola cosa a la vez:
-// Vico por default (el dueño lo decidió así, 15 sep 2026: el que llega
-// describe la pieza como le salga) y, como opción, buscar por nombre o
-// código; la otra forma siempre está a la vista en la tarjeta de abajo (y a
-// un F2 donde hay teclado).
+// área de clientes (el área la dice el contexto), con la misma disposición
+// que el nuevo pedido del mostrador (el dueño lo pidió así, 22 sep 2026): el
+// buscador —por nombre, marca, modelo, año o código, sin gastar tokens— es
+// la pantalla, y Vico flota abajo a la derecha con su cara, para el que no
+// sabe cómo se llama la pieza. La tarjeta de abajo y F2 (donde hay teclado)
+// lo abren; el chat sigue montado cerrado, así que la conversación no se
+// pierde al volver a buscar.
 //
-// Móvil primero (390 px): una sola columna con el chat o el buscador, y el
-// pedido como barra fija abajo —piezas, total y Continuar— que al tocarla
-// abre la lista completa como una hoja. Desde `lg` (el kiosco a 1366×768, o
-// el cliente en su PC) el pedido es la columna de la derecha, siempre a la
-// vista.
+// Móvil primero (390 px): una sola columna con el buscador, y el pedido como
+// barra fija abajo —piezas, total y Continuar— que al tocarla abre la lista
+// completa como una hoja; Vico sube para no tapar esa barra. Desde `lg` (el
+// kiosco a 1366×768, o el cliente en su PC) el pedido es la columna de la
+// derecha, siempre a la vista.
 //
 // El borrador que tiene IA es la única verdad: cada acción le pide el borrador
 // completo de vuelta y aquí solo se sustituye. Nada de sumar precios en el
 // navegador, o el total de la pantalla y el del mostrador acabarían discrepando.
 
-type Modo = "buscar" | "vico";
-
-/** La tarjeta de abajo: ofrece la otra forma de encontrar la pieza. */
+/** La tarjeta de abajo: la puerta a Vico para quien no sabe cómo se llama la pieza. */
 function TarjetaCambio({
   icono: Icono,
   titulo,
@@ -164,14 +158,14 @@ export function ArmarPedido({
   const router = useRouter();
   const [pedido, setPedido] = useState<Pedido | null>(borradorInicial);
   const [error, setError] = useState<string | null>(errorInicial);
-  const [modo, setModo] = useState<Modo>("vico");
+  const [vicoAbierto, setVicoAbierto] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   /** La hoja del pedido en móvil; en pantalla grande el pedido siempre está a la vista. */
   const [hojaAbierta, setHojaAbierta] = useState(false);
 
-  // F2 cambia entre Vico y el buscador desde cualquier parte de la pantalla
-  // (donde hay teclado): el cliente que ya está tecleando no lo suelta.
-  // Escape cierra la hoja del pedido si estaba abierta.
+  // F2 abre y cierra a Vico desde cualquier parte de la pantalla (donde hay
+  // teclado): el cliente que ya está tecleando no lo suelta. Escape cierra la
+  // hoja del pedido o el chat, lo que esté abierto.
   useEffect(() => {
     function atajo(evento: globalThis.KeyboardEvent) {
       if (evento.key === "Escape" && hojaAbierta) {
@@ -179,13 +173,18 @@ export function ArmarPedido({
         setHojaAbierta(false);
         return;
       }
+      if (evento.key === "Escape" && vicoAbierto) {
+        evento.preventDefault();
+        setVicoAbierto(false);
+        return;
+      }
       if (evento.key !== "F2" || !area.conTeclado) return;
       evento.preventDefault();
-      setModo((actual) => (actual === "vico" ? "buscar" : "vico"));
+      setVicoAbierto((actual) => !actual);
     }
     window.addEventListener("keydown", atajo);
     return () => window.removeEventListener("keydown", atajo);
-  }, [area.conTeclado, hojaAbierta]);
+  }, [area.conTeclado, hojaAbierta, vicoAbierto]);
 
   /** Relee el borrador de IA cuando una respuesta no lo trajo. */
   const releer = useCallback(async (): Promise<string | null> => {
@@ -278,45 +277,23 @@ export function ArmarPedido({
       )}
 
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-12 lg:items-stretch lg:gap-5">
-        <section
-          aria-label={modo === "vico" ? `Pregúntale a ${NEGOCIO.asistente}` : "Busca tu pieza"}
-          className="flex min-h-0 flex-col gap-3 lg:col-span-8"
-        >
+        <section aria-label="Busca tu pieza" className="flex min-h-0 flex-col gap-3 lg:col-span-8">
           <div className="min-h-0 flex-1">
-            {modo === "vico" ? (
-              <ChatKiosco
-                nombreCliente={nombreCliente}
-                onPedido={recibirPedidoDeVico}
-                onAgregar={agregarPieza}
-              />
-            ) : (
-              <BuscadorKiosco
-                ocupado={ocupado}
-                onAgregar={agregarPieza}
-                onVolverAVico={() => setModo("vico")}
-              />
-            )}
+            <BuscadorKiosco
+              ocupado={ocupado}
+              onAgregar={agregarPieza}
+              onVolverAVico={() => setVicoAbierto(true)}
+            />
           </div>
 
-          {modo === "vico" ? (
-            <TarjetaCambio
-              icono={Search}
-              titulo="¿Ya sabes cómo se llama la pieza?"
-              detalle="Búscala por nombre o por código: “FACIA VERSA”, “calavera Aveo”, “DDNVE15”."
-              accion="Busca tu pieza"
-              conTecla={area.conTeclado}
-              onClick={() => setModo("buscar")}
-            />
-          ) : (
-            <TarjetaCambio
-              icono={MessageCircleQuestion}
-              titulo="¿No sabes cómo se llama la pieza?"
-              detalle={`Descríbesela a ${NEGOCIO.asistente} como se te ocurra: “el foco de adelante de un Versa 2016”.`}
-              accion={`Pregúntale a ${NEGOCIO.asistente}`}
-              conTecla={area.conTeclado}
-              onClick={() => setModo("vico")}
-            />
-          )}
+          <TarjetaCambio
+            icono={MessageCircleQuestion}
+            titulo="¿No sabes cómo se llama la pieza?"
+            detalle={`Descríbesela a ${NEGOCIO.asistente} como se te ocurra: “el foco de adelante de un Versa 2016”.`}
+            accion={`Pregúntale a ${NEGOCIO.asistente}`}
+            conTecla={area.conTeclado}
+            onClick={() => setVicoAbierto(true)}
+          />
         </section>
 
         <aside aria-label="Tu pedido" className="hidden min-h-0 lg:col-span-4 lg:block">
@@ -330,6 +307,24 @@ export function ArmarPedido({
         onVer={() => setHojaAbierta(true)}
         onContinuar={continuar}
       />
+
+      {/* Vico abajo a la derecha, como en el sitio y en el mostrador. El panel
+          es más alto que el público: aquí trae los botones de agregar. */}
+      <VicoFlotante
+        abierto={vicoAbierto}
+        onCambiar={setVicoAbierto}
+        invitacion={`¿No sabes cómo se llama? Pregúntale a ${NEGOCIO.asistente}`}
+        clasePanel="md:h-[720px] md:w-[460px]"
+        sobreBarraMovil
+      >
+        <ChatKiosco
+          nombreCliente={nombreCliente}
+          onPedido={recibirPedidoDeVico}
+          onAgregar={agregarPieza}
+          onCerrar={() => setVicoAbierto(false)}
+          abierto={vicoAbierto}
+        />
+      </VicoFlotante>
 
       {hojaAbierta && (
         <div

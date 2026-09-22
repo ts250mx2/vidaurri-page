@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight, Trash2, X } from "lucide-react";
+import { FotoPieza } from "@/components/FotoPieza";
 import { Stepper } from "@/components/mostrador/Stepper";
 import { useArea } from "@/components/kiosco/AreaContext";
 import {
@@ -10,6 +11,7 @@ import {
   CLASE_ETIQUETA_KIOSCO,
 } from "@/components/kiosco/estilos";
 import { pesos } from "@/lib/formato";
+import { urlFotoNueva, urlFotoUsada } from "@/lib/fotos";
 import { nombreSucursal } from "@/lib/kiosco/identidad";
 import type { PartidaKiosco, PedidoKiosco as Pedido } from "@/lib/kiosco/tipos";
 import type { SucursalEntrega } from "@/lib/mostrador/tipos";
@@ -46,6 +48,12 @@ export interface PropsPedidoKiosco {
 function referenciaDe(partida: PartidaKiosco): string {
   if (partida.codigo) return partida.codigo;
   return partida.idPiezaUsada !== null ? `Usada #${partida.idPiezaUsada}` : "";
+}
+
+/** La foto del renglón según de dónde salió la pieza; null si IA no la mandó (la casilla dice "foto por tomar"). */
+function urlFotoPartida(partida: PartidaKiosco): string | null {
+  if (!partida.foto) return null;
+  return partida.origen === "usada" ? urlFotoUsada(partida.foto) : urlFotoNueva(partida.foto);
 }
 
 /** Dónde se recoge, o que eso se elige al final. */
@@ -129,6 +137,12 @@ export function PedidoKiosco({
               return (
                 <li key={partida.idPartida} className="flex flex-col gap-2 py-3.5">
                   <div className="flex items-start gap-2.5">
+                    <FotoPieza
+                      src={urlFotoPartida(partida)}
+                      alt={`Foto de ${partida.descripcion}`}
+                      className="mesa-dibujo size-16 shrink-0 rounded-md border border-linea"
+                      imgClassName="p-0.5"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="text-base font-semibold leading-snug text-tinta">
                         {partida.descripcion}

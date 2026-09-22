@@ -7,6 +7,7 @@ import { useArea } from "@/components/kiosco/AreaContext";
 import { CLASE_CAMPO_KIOSCO, CLASE_ERROR_KIOSCO } from "@/components/kiosco/estilos";
 import { RenglonPieza, type FaseAgregar } from "@/components/kiosco/RenglonPieza";
 import { Tecla } from "@/components/kiosco/Tecla";
+import { urlFotoNueva } from "@/lib/fotos";
 import {
   arregloDe,
   esOk,
@@ -18,15 +19,17 @@ import {
 import type { ArticuloKiosco } from "@/lib/kiosco/tipos";
 import type { CapturaPartida } from "@/lib/mostrador/tipos";
 
-// El buscador por nombre o código. En la PC del kiosco se opera entero con el
-// teclado, sin tocar el ratón:
+// El buscador por nombre, marca, modelo, año o código (IA cruza cada palabra
+// con descripción, código y línea, y un año con el rango del artículo). Es la
+// pantalla principal del armado del pedido; Vico flota a un lado. En la PC
+// del kiosco se opera entero con el teclado, sin tocar el ratón:
 //
 //   Enter    busca ya (sin esperar el retardo) y salta al primer resultado
 //   ↓ ↑      recorren los resultados (el foco real va al botón del renglón,
 //            así que Enter los agrega sin inventar manejadores)
 //   Enter    en un resultado, lo agrega al pedido
 //   Escape   limpia la búsqueda y regresa el cursor al campo; con el campo ya
-//            vacío, regresa a Vico, que es la pantalla por default
+//            vacío, abre el chat de Vico
 //
 // Los atajos se pintan junto a cada acción cuando el área tiene teclado (el
 // kiosco no tiene manual); en el celular del cliente no se enseñan, aunque
@@ -35,6 +38,8 @@ import type { CapturaPartida } from "@/lib/mostrador/tipos";
 const DEBOUNCE_MS = 250;
 const MIN_BUSQUEDA = 2;
 const BUSQUEDA_MAX = 60;
+/** Es la pantalla de buscar, no una lista corta: caben más que los 20 de IA. */
+const LIMITE = 60;
 /** Lo que dura el "Agregado ✓" antes de volver a ofrecer el botón. */
 const MOSTRAR_AGREGADO_MS = 2000;
 const ERROR_BUSQUEDA = "No pude buscar en el catálogo; inténtalo otra vez";
@@ -48,7 +53,7 @@ export function BuscadorKiosco({
 }: {
   ocupado: boolean;
   onAgregar: AgregarDelBuscador;
-  /** Escape con el campo vacío: de vuelta a Vico, la pantalla por default. */
+  /** Escape con el campo vacío: se abre el chat de Vico. */
   onVolverAVico: () => void;
 }) {
   const area = useArea();
@@ -99,7 +104,7 @@ export function BuscadorKiosco({
     const temporizador = setTimeout(
       async () => {
         setBuscando(true);
-        const parametros = new URLSearchParams({ busqueda: texto });
+        const parametros = new URLSearchParams({ busqueda: texto, limite: String(LIMITE) });
         const respuesta = await llamarArea(area, `/articulos?${parametros}`, { signal: control.signal });
         if (respuesta.status === STATUS_ABORTADA || control.signal.aborted) return;
         setBuscando(false);
@@ -260,7 +265,7 @@ export function BuscadorKiosco({
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             onKeyDown={alTeclearEnCampo}
-            placeholder="Ej: FACIA VERSA, calavera Aveo o el código"
+            placeholder="Ej: FACIA NISSAN VERSA 2017, calavera Aveo o el código"
             maxLength={BUSQUEDA_MAX}
             autoComplete="off"
             autoCapitalize="characters"
@@ -277,7 +282,7 @@ export function BuscadorKiosco({
               <Tecla>↓</Tecla> <Tecla>↑</Tecla> recorren los resultados
             </span>
             <span>
-              <Tecla>Esc</Tecla> limpia; con el campo vacío, vuelve a Vico
+              <Tecla>Esc</Tecla> limpia; con el campo vacío, abre a Vico
             </span>
           </p>
         )}
@@ -296,8 +301,8 @@ export function BuscadorKiosco({
             <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-tinta-suave">
               Con el nombre basta: <span className="font-semibold text-tinta">facia</span>,{" "}
               <span className="font-semibold text-tinta">calavera</span>,{" "}
-              <span className="font-semibold text-tinta">cofre</span>… y la marca y el modelo de tu
-              carro. Si traes el código de la pieza, también sirve.
+              <span className="font-semibold text-tinta">cofre</span>… y la marca, el modelo y el
+              año de tu carro, en el orden que sea. Si traes el código de la pieza, también sirve.
             </p>
           </div>
         )}
@@ -310,7 +315,7 @@ export function BuscadorKiosco({
           <div className="px-5 py-8 text-center sm:px-6 sm:py-10">
             <p className="titulo-lamina text-xl text-tinta sm:text-2xl">No encontré nada con ese dato</p>
             <p className="mx-auto mt-3 max-w-md text-base leading-relaxed text-tinta-suave">
-              Prueba con otras palabras, o pregúntale a Vico aquí abajo: él entiende
+              Prueba con otras palabras, o pregúntale a Vico (abajo a la derecha): él entiende
               &ldquo;el foco de adelante de un Versa 2016&rdquo;. También te atendemos en el mostrador.
             </p>
           </div>
@@ -332,6 +337,7 @@ export function BuscadorKiosco({
                 descripcion={articulo.descripcion}
                 precioConIva={articulo.precioConIva}
                 hayEnTienda={articulo.hayEnTienda}
+                foto={articulo.fotoArchivo ? urlFotoNueva(articulo.fotoArchivo) : null}
                 fase={fases[articulo.codigo] ?? "libre"}
                 error={errores[articulo.codigo] ?? null}
                 bloqueado={ocupado || hayAgregando}

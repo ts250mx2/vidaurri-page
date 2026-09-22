@@ -23,6 +23,8 @@ export interface ArticuloKiosco {
   /** IVA incluido, precio de mostrador (sin descuentos de padrón). */
   precioConIva: number;
   hayEnTienda: boolean;
+  /** Archivo de la foto en el S3, para `urlFotoNueva`; null si IA no lo mandó (se pide por código). */
+  fotoArchivo?: string | null;
 }
 
 /** Pieza que Vico consultó en el turno, con el botón "Agregar al pedido". */
@@ -48,6 +50,8 @@ export interface PartidaKiosco {
   importe: number;
   /** ¿Alcanza lo que hay en tienda para lo que pidió? Nunca el número. */
   hayEnTienda: boolean;
+  /** Archivo de la foto: S3 en nuevas (`urlFotoNueva`), Bodega en usadas (`urlFotoUsada`); null = sin foto. */
+  foto: string | null;
 }
 
 /** El borrador del aparato (`pedidoParaKiosco`): piezas, total y renglones. */
@@ -106,6 +110,9 @@ export function sanearArticulo(valor: unknown): ArticuloKiosco | null {
     descripcion,
     precioConIva: numero(valor.precioConIva),
     hayEnTienda: hayEnTiendaDe(valor),
+    // Del buscador viene el ARCHIVO (`foto`); las piezas de Vico traen en
+    // `foto` una URL ya sellada y ese campo lo lee `sanearPiezaDeVico`.
+    fotoArchivo: typeof valor.foto === "string" && valor.foto && !valor.foto.startsWith("/") ? valor.foto : null,
   };
 }
 
@@ -142,6 +149,7 @@ function sanearPartida(valor: unknown): PartidaKiosco | null {
     precioConIva: numero(valor.precioConIva ?? valor.precioUnitario),
     importe: numero(valor.importe),
     hayEnTienda: hayEnTiendaDe(valor),
+    foto: typeof valor.foto === "string" && valor.foto ? valor.foto : null,
   };
 }
 

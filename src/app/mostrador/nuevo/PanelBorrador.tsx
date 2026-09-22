@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { BuscadorArticulos } from "@/components/mostrador/BuscadorArticulos";
+import { FotoPieza } from "@/components/FotoPieza";
 import {
   CLASE_BOTON_AMBAR,
   CLASE_BOTON_SECUNDARIO,
@@ -12,6 +12,7 @@ import {
 } from "@/components/mostrador/estilos";
 import { Stepper } from "@/components/mostrador/Stepper";
 import { pesos } from "@/lib/formato";
+import { urlFotoNueva, urlFotoUsada } from "@/lib/fotos";
 import { OBSERVACIONES_MAX } from "@/lib/mostrador/reglas";
 import { SUCURSALES_ENTREGA, type PartidaPedido, type PedidoDetalle } from "@/lib/mostrador/tipos";
 import type { ResultadoAccion } from "./NuevoPedido";
@@ -28,7 +29,6 @@ interface PropsPanelBorrador {
   borrador: PedidoDetalle | null;
   ocupado: boolean;
   clientePublico: string;
-  onAgregar: (codigo: string, cantidad: number) => ResultadoAccion;
   onCantidad: (idPartida: number, cantidad: number) => ResultadoAccion;
   onQuitar: (idPartida: number) => ResultadoAccion;
   onEnviar: (observaciones: string) => ResultadoAccion;
@@ -36,7 +36,12 @@ interface PropsPanelBorrador {
 }
 
 const CONFIRMAR_CANCELAR = "¿Cancelar el borrador? Se pierden las partidas capturadas.";
-const AYUDA_BUSCADOR = "Por código o descripción; el precio ya trae el descuento del cliente.";
+
+/** La foto del renglón según de dónde salió la pieza; null si IA no la mandó (la casilla dice "foto por tomar"). */
+function urlFotoPartida(p: PartidaPedido): string | null {
+  if (!p.foto) return null;
+  return p.origen === "usada" ? urlFotoUsada(p.foto) : urlFotoNueva(p.foto);
+}
 
 function nombreSucursal(clave: string): string {
   return SUCURSALES_ENTREGA.find((s) => s.clave === clave)?.nombre ?? clave;
@@ -52,7 +57,6 @@ export function PanelBorrador({
   borrador,
   ocupado,
   clientePublico,
-  onAgregar,
   onCantidad,
   onQuitar,
   onEnviar,
@@ -121,6 +125,12 @@ export function PanelBorrador({
                 <li key={p.id} className="flex flex-col gap-2 py-2.5">
                   <div className="flex items-start gap-2">
                     <span className="globo-partida mt-0.5">{p.partida}</span>
+                    <FotoPieza
+                      src={urlFotoPartida(p)}
+                      alt={`Foto de ${p.descripcion}`}
+                      className="trama-anaquel size-14 shrink-0 rounded-sm border border-linea"
+                      imgClassName="p-0.5"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold leading-snug text-tinta">{p.descripcion}</p>
                       <p className="num-tab mt-0.5 font-mono text-xs text-tinta-suave">
@@ -162,7 +172,7 @@ export function PanelBorrador({
           </ul>
         ) : (
           <p className="rounded-md border border-dashed border-linea-fuerte px-3 py-4 text-center text-sm text-tinta-suave">
-            Todavía no hay piezas. Pídeselas a Vico o agrégalas aquí abajo.
+            Todavía no hay piezas. Búscalas en la columna de al lado o pídeselas a Vico.
           </p>
         )}
 
@@ -220,14 +230,6 @@ export function PanelBorrador({
           </button>
         </div>
       </div>
-
-      <BuscadorArticulos
-        titulo="Agregar sin Vico"
-        ayuda={AYUDA_BUSCADOR}
-        idCliente={borrador?.idCliente ?? null}
-        ocupado={bloqueado}
-        onAgregar={onAgregar}
-      />
     </div>
   );
 }

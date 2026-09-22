@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChatMostrador } from "@/components/mostrador/ChatMostrador";
+import { BuscadorArticulos } from "@/components/mostrador/BuscadorArticulos";
+import { VicoFlotante } from "@/components/mostrador/VicoFlotante";
 import {
   CLASE_BOTON_PLANO,
   CLASE_BOTON_SECUNDARIO,
@@ -59,6 +60,11 @@ interface Choque {
 function rutaPedido(id: number): string {
   return `/mostrador/pedidos/${id}`;
 }
+
+const AYUDA_BUSCADOR =
+  "Nombre de la pieza, marca, modelo o año, en el orden que sea (ej. FACIA NISSAN VERSA 2017). Los precios ya traen el descuento del cliente.";
+/** Es la pantalla de buscar, no una lista para elegir a mano: caben más que en el detalle. */
+const LIMITE_BUSCADOR = 60;
 
 export function NuevoPedido({ borradorInicial, perfil, vendedor, errorInicial }: PropsNuevoPedido) {
   const router = useRouter();
@@ -209,8 +215,8 @@ export function NuevoPedido({ borradorInicial, perfil, vendedor, errorInicial }:
           <h1 className="titulo-lamina mt-1 text-3xl">Nuevo pedido</h1>
         </div>
         <p className="max-w-xl text-sm leading-relaxed text-tinta-suave">
-          Elige al cliente, pídele las piezas a Vico o agrégalas a mano, y envía el
-          pedido para que el mostrador confirme la existencia.
+          Elige al cliente, busca las piezas (o pídeselas a Vico, abajo a la
+          derecha) y envía el pedido para que el mostrador confirme la existencia.
         </p>
       </header>
 
@@ -257,12 +263,16 @@ export function NuevoPedido({ borradorInicial, perfil, vendedor, errorInicial }:
             onSucursal={cambiarSucursal}
           />
         </section>
-        <section aria-label={`Chat con Vico`} className="lg:col-span-5">
-          <ChatMostrador
+        <section aria-label="Buscar piezas" className="lg:col-span-5">
+          {/* Directo a bdav, sin pasar por Vico: no gasta tokens. */}
+          <BuscadorArticulos
+            titulo="Buscar piezas"
+            ayuda={AYUDA_BUSCADOR}
             idCliente={idCliente}
-            sucursal={sucursal}
-            onPedido={recibirPedidoDeVico}
-            onAgregar={capturarPartida}
+            ocupado={ocupado}
+            onAgregar={agregarPartida}
+            limite={LIMITE_BUSCADOR}
+            alto="max-h-[calc(100vh-22rem)] min-h-64"
           />
         </section>
         <section aria-label="Pedido en captura" className="lg:col-span-4">
@@ -270,7 +280,6 @@ export function NuevoPedido({ borradorInicial, perfil, vendedor, errorInicial }:
             borrador={borrador}
             ocupado={ocupado}
             clientePublico={CLIENTE_PUBLICO}
-            onAgregar={agregarPartida}
             onCantidad={cambiarCantidad}
             onQuitar={quitarPartida}
             onEnviar={enviarPedido}
@@ -278,6 +287,15 @@ export function NuevoPedido({ borradorInicial, perfil, vendedor, errorInicial }:
           />
         </section>
       </div>
+
+      {/* Vico flota abajo a la izquierda, como en el sitio público: el hilo
+          sigue vivo aunque se cierre. */}
+      <VicoFlotante
+        idCliente={idCliente}
+        sucursal={sucursal}
+        onPedido={recibirPedidoDeVico}
+        onAgregar={capturarPartida}
+      />
     </div>
   );
 }

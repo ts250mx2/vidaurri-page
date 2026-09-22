@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { RotateCcw, Send, TriangleAlert } from "lucide-react";
+import { RotateCcw, Send, TriangleAlert, X } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import clsx from "clsx";
-import { LogoAV } from "@/components/LogoAV";
+import { AvatarChat } from "@/components/chat/AvatarChat";
 import { TextoVico, type FotoChat } from "@/components/chat/TextoVico";
 import { NEGOCIO } from "@/config/negocio";
 import {
@@ -21,7 +21,10 @@ import { PiezasDeVico, type AgregarPieza } from "./PiezasDeVico";
 
 // Vico atendiendo al cliente que arma su pedido: parado en el kiosco de la
 // tienda o desde su celular en el área de clientes (el área la dice el
-// contexto; solo cambia a qué proxy se habla). Es el mismo asistente del chat
+// contexto; solo cambia a qué proxy se habla). Flota abajo a la derecha de la
+// pantalla de armar el pedido (`ArmarPedido`), como en el sitio y en el
+// mostrador; este componente solo pinta el chat en el alto que le den y
+// ofrece la X cuando el padre manda `onCerrar`. Es el mismo asistente del chat
 // público y del mostrador, pero con un actor que busca, cotiza y agrega al
 // pedido, y NO puede enviarlo —eso es el botón ámbar de la pantalla— ni pedir
 // datos personales.
@@ -79,12 +82,18 @@ export function ChatKiosco({
   nombreCliente = null,
   onPedido,
   onAgregar,
+  onCerrar,
+  abierto = true,
 }: {
   /** Nombre del cliente del padrón que entró; null = público general. */
   nombreCliente?: string | null;
   /** Borrador tal como quedó tras el turno (Vico sí puede agregar piezas). */
   onPedido: (pedido: PedidoKiosco | null) => void;
   onAgregar: AgregarPieza;
+  /** Cerrar el panel flotante; sin él no se pinta la X. */
+  onCerrar?: () => void;
+  /** El padre lo acaba de abrir: el cursor va al campo (solo donde hay teclado). */
+  abierto?: boolean;
 }) {
   const area = useArea();
   const [mensajes, setMensajes] = useState<Mensaje[]>([saludoPara(nombreCliente)]);
@@ -98,10 +107,10 @@ export function ChatKiosco({
 
   // En la PC del kiosco el chat se abre con el cursor listo: el cliente ya
   // venía tecleando. En el celular no: enfocar abriría el teclado y taparía
-  // el saludo antes de leerlo.
+  // el saludo antes de leerlo. Se repite cada vez que el panel se abre.
   useEffect(() => {
-    if (area.conTeclado) entradaRef.current?.focus();
-  }, [area.conTeclado]);
+    if (area.conTeclado && abierto) entradaRef.current?.focus();
+  }, [area.conTeclado, abierto]);
 
   useEffect(() => {
     finRef.current?.scrollIntoView({ block: "end" });
@@ -175,7 +184,7 @@ export function ChatKiosco({
   return (
     <div className="lamina flex h-full flex-col overflow-hidden">
       <div className="flex items-center gap-3 border-b border-linea bg-hoja px-4 py-3 sm:px-5">
-        <LogoAV lado={34} />
+        <AvatarChat lado={40} className="ring-2 ring-ambar" />
         <div className="min-w-0">
           <p className="rotulo-tecnico truncate text-base text-tinta">
             Pregúntale a {NEGOCIO.asistente}
@@ -197,6 +206,17 @@ export function ChatKiosco({
           >
             <RotateCcw aria-hidden className="size-4" />
           </button>
+          {onCerrar && (
+            <button
+              type="button"
+              onClick={onCerrar}
+              aria-label="Cerrar el chat y seguir buscando"
+              title="Cerrar (la conversación se conserva)"
+              className={twMerge(CLASE_BOTON_NEUTRO_KIOSCO, "size-11 px-0 sm:size-11 sm:px-0")}
+            >
+              <X aria-hidden className="size-5" />
+            </button>
+          )}
         </div>
       </div>
 

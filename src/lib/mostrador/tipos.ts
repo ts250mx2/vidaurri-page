@@ -51,6 +51,12 @@ export interface PartidaPedido {
    */
   cantidadAldo?: number | null;
   nota: string | null;
+  /**
+   * Foto del renglón: en nuevas el archivo del S3 (para `urlFotoNueva`), en
+   * usadas el `nombre_imagen` de la Bodega (para `urlFotoUsada`). null = sin
+   * foto o la base no contestó. Opcional porque el motor puede ser anterior.
+   */
+  foto?: string | null;
 }
 
 export interface EventoPedido {
@@ -235,6 +241,12 @@ export interface ArticuloParaPedido {
   precioSinIva: number;
   marca: string;
   tipoParte: string;
+  /**
+   * Nombre de archivo de la foto en el S3 (`imagen` capturada o el código),
+   * para `urlFotoNueva`. Opcional mientras IA termina de mandarlo: sin él el
+   * buscador pinta la casilla "foto por tomar", no se rompe.
+   */
+  foto?: string;
 }
 
 /** Cliente del padrón de descuentos, solo los campos que el mostrador necesita. */

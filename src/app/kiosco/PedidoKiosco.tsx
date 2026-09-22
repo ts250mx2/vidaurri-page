@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight, Trash2, X } from "lucide-react";
-import { FotoPieza } from "@/components/FotoPieza";
+import { FotoAmpliable, VisorPieza } from "@/components/VisorPieza";
 import { Stepper } from "@/components/mostrador/Stepper";
 import { useArea } from "@/components/kiosco/AreaContext";
 import {
@@ -28,6 +28,8 @@ import type { SucursalEntrega } from "@/lib/mostrador/tipos";
 // cliente y el que ve el mostrador son siempre el mismo número.
 
 const CONFIRMAR_VACIAR = "¿Vaciar tu pedido y empezar de nuevo?";
+/** Renglones que nacen a la vista: su foto va con descarga inmediata (ver `RenglonPieza`). */
+const A_LA_VISTA = 6;
 
 export interface PropsPedidoKiosco {
   pedido: Pedido | null;
@@ -75,6 +77,8 @@ export function PedidoKiosco({
   const area = useArea();
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
+  /** El renglón abierto en grande (`VisorPieza`); null = cerrado. */
+  const [ampliada, setAmpliada] = useState<PartidaKiosco | null>(null);
 
   const partidas = pedido?.partidas ?? [];
   const hayPiezas = partidas.length > 0;
@@ -102,6 +106,18 @@ export function PedidoKiosco({
 
   return (
     <div className="lamina flex h-full flex-col overflow-hidden">
+      {ampliada && (
+        <VisorPieza
+          pieza={{
+            foto: urlFotoPartida(ampliada),
+            codigo: referenciaDe(ampliada),
+            descripcion: ampliada.descripcion,
+            precioConIva: ampliada.precioConIva,
+            existencia: ampliada.origen === "usada" ? "Pieza única" : ampliada.hayEnTienda ? "En existencia" : "Sobre pedido",
+          }}
+          onCerrar={() => setAmpliada(null)}
+        />
+      )}
       <div className="flex items-start gap-3 border-b border-linea px-4 py-3.5 sm:px-5 sm:py-4">
         <div className="min-w-0 flex-1">
           <p className={CLASE_ETIQUETA_KIOSCO}>Tu pedido</p>
@@ -131,17 +147,19 @@ export function PedidoKiosco({
       <div className="flex-1 overflow-y-auto px-4 sm:px-5">
         {hayPiezas ? (
           <ul className="flex flex-col divide-y divide-linea">
-            {partidas.map((partida) => {
+            {partidas.map((partida, i) => {
               const referencia = referenciaDe(partida);
               const esUsada = partida.origen === "usada";
               return (
                 <li key={partida.idPartida} className="flex flex-col gap-2 py-3.5">
                   <div className="flex items-start gap-2.5">
-                    <FotoPieza
+                    <FotoAmpliable
                       src={urlFotoPartida(partida)}
-                      alt={`Foto de ${partida.descripcion}`}
-                      className="mesa-dibujo size-16 shrink-0 rounded-md border border-linea"
+                      alt={partida.descripcion}
+                      className="mesa-dibujo size-16 rounded-md border border-linea"
                       imgClassName="p-0.5"
+                      prioritaria={i < A_LA_VISTA}
+                      onAmpliar={() => setAmpliada(partida)}
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-base font-semibold leading-snug text-tinta">

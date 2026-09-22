@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { CLASE_BOTON_PLANO, CLASE_ERROR } from "@/components/mostrador/estilos";
 import { CANTIDAD_MIN, Stepper, acotarCantidad } from "@/components/mostrador/Stepper";
+import { FotoAmpliable, VisorPieza } from "@/components/VisorPieza";
 import { pesos } from "@/lib/formato";
+import { urlFotoNueva } from "@/lib/fotos";
 import type { CapturaPartida, ProductoMencionado } from "@/lib/mostrador/tipos";
 
 // Renglones "Agregar al pedido" bajo cada respuesta de Vico en el mostrador:
@@ -62,6 +64,18 @@ function capturaDe(p: ProductoMencionado, cantidad: number): CapturaPartida {
     : { origen: "nueva", codigo: p.codigo, idPiezaUsada: null, cantidad };
 }
 
+/** La foto que mandó IA o, en nuevas, la del catálogo por código; una usada sin foto se queda sin ella. */
+function urlFotoDe(p: ProductoMencionado): string | null {
+  if (p.foto) return p.foto;
+  return p.origen === "nueva" ? urlFotoNueva(p.codigo) : null;
+}
+
+function textoExistencia(p: ProductoMencionado): string {
+  if (p.origen === "usada") return TEXTO_PIEZA_UNICA;
+  if (p.existencia > 0) return `En existencia: ${p.existencia}`;
+  return p.sobrePedido === true ? `${TEXTO_SIN_EXISTENCIA} · sobre pedido` : TEXTO_SIN_EXISTENCIA;
+}
+
 function textoDelBoton(estado: EstadoRenglon | undefined): string {
   if (estado?.fase === "agregando") return TEXTO_AGREGANDO;
   if (estado?.fase === "agregado") return TEXTO_AGREGADO;
@@ -88,6 +102,8 @@ function Existencia({ producto }: { producto: ProductoMencionado }) {
 export function ProductosDeVico({ productos, ocupado = false, onAgregar }: PropsProductosDeVico) {
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [estados, setEstados] = useState<Record<string, EstadoRenglon>>({});
+  /** La pieza abierta en grande (`VisorPieza`); null = cerrado. */
+  const [ampliada, setAmpliada] = useState<ProductoMencionado | null>(null);
   // Los "Agregado ✓" se apagan solos; si el chat se reinicia antes, se limpian.
   const temporizadores = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
@@ -126,7 +142,33 @@ export function ProductosDeVico({ productos, ocupado = false, onAgregar }: Props
     temporizadores.current.add(temporizador);
   }
 
+  const ampliadaBloqueada =
+    ampliada !== null &&
+    (ocupado || hayAgregando || !sePuedeAgregar(ampliada) || estados[claveDe(ampliada)]?.fase === "agregado");
+
   return (
+    <>
+    {ampliada && (
+      <VisorPieza
+        pieza={{
+          foto: urlFotoDe(ampliada),
+          codigo: ampliada.codigo,
+          descripcion: ampliada.descripcion,
+          precioConIva: ampliada.precioConIva,
+          existencia: textoExistencia(ampliada),
+        }}
+        onCerrar={() => setAmpliada(null)}
+        accion={{
+          texto: TEXTO_AGREGAR,
+          disabled: ampliadaBloqueada,
+          onClick: () => {
+            const pieza = ampliada;
+            setAmpliada(null);
+            void agregar(pieza);
+          },
+        }}
+      />
+    )}
     <ul
       aria-label="Piezas que Vico consultó"
       className="mt-2.5 flex flex-col divide-y divide-linea border-t border-linea"
@@ -141,15 +183,14 @@ export function ProductosDeVico({ productos, ocupado = false, onAgregar }: Props
         return (
           <li key={clave} className="flex flex-col gap-2 py-2.5">
             <div className="flex gap-2.5">
-              {p.foto && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={p.foto}
-                  alt=""
-                  loading="lazy"
-                  className="mesa-dibujo size-11 shrink-0 rounded-sm border border-linea object-contain"
-                />
-              )}
+              <FotoAmpliable
+                src={urlFotoDe(p)}
+                alt={p.descripcion}
+                prioritaria
+                className="mesa-dibujo size-16 rounded-sm border border-linea"
+                imgClassName="p-0.5"
+                onAmpliar={() => setAmpliada(p)}
+              />
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 text-sm font-semibold leading-snug text-tinta">
                   {p.descripcion}
@@ -202,5 +243,6 @@ export function ProductosDeVico({ productos, ocupado = false, onAgregar }: Props
         );
       })}
     </ul>
+    </>
   );
 }

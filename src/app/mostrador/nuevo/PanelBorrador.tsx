@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { FotoPieza } from "@/components/FotoPieza";
+import { FormularioDomicilio } from "@/components/domicilio/FormularioDomicilio";
+import { FotoAmpliable, VisorPieza } from "@/components/VisorPieza";
 import {
   CLASE_BOTON_AMBAR,
   CLASE_BOTON_SECUNDARIO,
@@ -11,6 +12,7 @@ import {
   CLASE_ETIQUETA,
 } from "@/components/mostrador/estilos";
 import { Stepper } from "@/components/mostrador/Stepper";
+import { DOMICILIO_VACIO, domicilioVacio, validarDomicilio, type Domicilio } from "@/lib/domicilio";
 import { pesos } from "@/lib/formato";
 import { urlFotoNueva, urlFotoUsada } from "@/lib/fotos";
 import { OBSERVACIONES_MAX } from "@/lib/mostrador/reglas";
@@ -31,11 +33,15 @@ interface PropsPanelBorrador {
   clientePublico: string;
   onCantidad: (idPartida: number, cantidad: number) => ResultadoAccion;
   onQuitar: (idPartida: number) => ResultadoAccion;
-  onEnviar: (observaciones: string) => ResultadoAccion;
+  /** `domicilio` ya validado: null si el vendedor no capturó ninguno. */
+  onEnviar: (observaciones: string, domicilio: Domicilio | null) => ResultadoAccion;
   onCancelar: () => ResultadoAccion;
 }
 
 const CONFIRMAR_CANCELAR = "¿Cancelar el borrador? Se pierden las partidas capturadas.";
+
+/** Renglones que nacen a la vista: su foto va con descarga inmediata (Chromium no dispara la carga diferida sin scroll). */
+const A_LA_VISTA = 6;
 
 /** La foto del renglón según de dónde salió la pieza; null si IA no la mandó (la casilla dice "foto por tomar"). */
 function urlFotoPartida(p: PartidaPedido): string | null {
@@ -62,7 +68,12 @@ export function PanelBorrador({
   onEnviar,
   onCancelar,
 }: PropsPanelBorrador) {
+  /** El renglón abierto en grande (`VisorPieza`); null = cerrado. */
+  const [ampliada, setAmpliada] = useState<PartidaPedido | null>(null);
   const [observaciones, setObservaciones] = useState("");
+  const [domicilio, setDomicilio] = useState<Domicilio>(DOMICILIO_VACIO);
+  /** El bloque del domicilio abierto; se abre solo si ya se tecleó algo. */
+  const [conDomicilio, setConDomicilio] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
   const [quitando, setQuitando] = useState<number | null>(null);
@@ -101,6 +112,18 @@ export function PanelBorrador({
 
   return (
     <div className="flex flex-col gap-4">
+      {ampliada && (
+        <VisorPieza
+          pieza={{
+            foto: urlFotoPartida(ampliada),
+            codigo: referenciaDe(ampliada),
+            descripcion: ampliada.descripcion,
+            precioConIva: ampliada.precioUnitario,
+            existencia: ampliada.origen === "usada" ? "Pieza única" : `${ampliada.cantidad} en el pedido`,
+          }}
+          onCerrar={() => setAmpliada(null)}
+        />
+      )}
       <div className="lamina flex flex-col gap-4 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -118,18 +141,20 @@ export function PanelBorrador({
 
         {hayPartidas ? (
           <ul className="flex flex-col divide-y divide-linea border-y border-linea">
-            {partidas.map((p) => {
+            {partidas.map((p, i) => {
               const referencia = referenciaDe(p);
               const esUsada = p.origen === "usada";
               return (
                 <li key={p.id} className="flex flex-col gap-2 py-2.5">
                   <div className="flex items-start gap-2">
                     <span className="globo-partida mt-0.5">{p.partida}</span>
-                    <FotoPieza
+                    <FotoAmpliable
                       src={urlFotoPartida(p)}
-                      alt={`Foto de ${p.descripcion}`}
-                      className="trama-anaquel size-14 shrink-0 rounded-sm border border-linea"
+                      alt={p.descripcion}
+                      className="trama-anaquel size-14 rounded-sm border border-linea"
                       imgClassName="p-0.5"
+                      prioritaria={i < A_LA_VISTA}
+                      onAmpliar={() => setAmpliada(p)}
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold leading-snug text-tinta">{p.descripcion}</p>
@@ -187,6 +212,25 @@ export function PanelBorrador({
           </dl>
         )}
 
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className={CLASE_ETIQUETA}>Domicilio del cliente (opcional)</p>
+            {!(conDomicilio || !domicilioVacio(domicilio)) && (
+              <button
+                type="button"
+                onClick={() => setConDomicilio(true)}
+                disabled={bloqueado}
+                className="text-xs font-semibold text-tinta underline underline-offset-4"
+              >
+                Capturar domicilio
+              </button>
+            )}
+          </div>
+          {(conDomicilio || !domicilioVacio(domicilio)) && (
+            <FormularioDomicilio valor={domicilio} onChange={setDomicilio} disabled={bloqueado} estilo="mostrador" />
+          )}
+        </div>
+
         <div className="flex flex-col gap-1.5">
           <label htmlFor="observaciones-pedido" className={CLASE_ETIQUETA}>
             Observaciones
@@ -211,7 +255,14 @@ export function PanelBorrador({
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => void correr(() => onEnviar(observaciones))}
+            onClick={() => {
+              const validado = validarDomicilio(domicilio);
+              if (!validado.ok) {
+                setError(validado.error);
+                return;
+              }
+              void correr(() => onEnviar(observaciones, validado.domicilio));
+            }}
             disabled={bloqueado || !hayPartidas}
             className={CLASE_BOTON_AMBAR}
           >

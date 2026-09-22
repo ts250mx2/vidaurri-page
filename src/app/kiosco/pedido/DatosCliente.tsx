@@ -3,7 +3,8 @@
 import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send, UserRound } from "lucide-react";
+import { ArrowLeft, MapPin, Send, UserRound } from "lucide-react";
+import { FormularioDomicilio } from "@/components/domicilio/FormularioDomicilio";
 import {
   CLASE_BOTON_AMBAR_KIOSCO,
   CLASE_BOTON_NEUTRO_KIOSCO,
@@ -24,11 +25,13 @@ import {
   llamarKiosco,
   mensajeFallo,
 } from "@/lib/kiosco/navegador";
+import { DOMICILIO_VACIO, domicilioVacio, validarDomicilio, type Domicilio } from "@/lib/domicilio";
 import { RUTA_KIOSCO, RUTA_KIOSCO_ENTRAR, RUTA_KIOSCO_LISTO } from "@/lib/kiosco/rutas";
 import { sanearAcuse } from "@/lib/kiosco/tipos";
 
 // Los dos datos con los que el mostrador va a hablarle al cliente: su nombre y
-// su celular. Nada más: ni correo, ni dirección, ni RFC. Se validan aquí para
+// su celular; y, si quiere, su domicilio (opcional, con el CP prellenando
+// colonia, municipio y estado). Ni correo ni RFC. Se validan aquí para
 // que el error salga al instante (IA los vuelve a validar con la misma regla),
 // y el botón ámbar es LA acción de la pantalla: enviar el pedido.
 //
@@ -49,6 +52,8 @@ export function DatosCliente({ cliente }: { cliente: Datos | null }) {
   const [telefono, setTelefono] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [domicilio, setDomicilio] = useState<Domicilio>(DOMICILIO_VACIO);
+  const [conDomicilio, setConDomicilio] = useState(false);
   const nombreRef = useRef<HTMLInputElement>(null);
   const telefonoRef = useRef<HTMLInputElement>(null);
 
@@ -70,9 +75,15 @@ export function DatosCliente({ cliente }: { cliente: Datos | null }) {
       datos = validacion.datos;
     }
 
+    const validado = validarDomicilio(domicilio);
+    if (!validado.ok) {
+      setError(validado.error);
+      return;
+    }
+
     setEnviando(true);
     setError(null);
-    const respuesta = await llamarKiosco("/borrador/enviar", { cuerpo: datos });
+    const respuesta = await llamarKiosco("/borrador/enviar", { cuerpo: { ...datos, domicilio: validado.domicilio } });
     if (kioscoDesactivado(respuesta)) return;
     const acuse = esOk(respuesta.datos) ? sanearAcuse(respuesta.datos) : null;
     if (!acuse) {
@@ -185,6 +196,27 @@ export function DatosCliente({ cliente }: { cliente: Datos | null }) {
           </p>
         </>
       )}
+
+      <div className="flex flex-col gap-3">
+        {conDomicilio || !domicilioVacio(domicilio) ? (
+          <>
+            <p className={CLASE_ETIQUETA_KIOSCO}>
+              Tu domicilio <span className="normal-case tracking-normal">(opcional)</span>
+            </p>
+            <FormularioDomicilio valor={domicilio} onChange={setDomicilio} disabled={enviando} estilo="kiosco" />
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConDomicilio(true)}
+            disabled={enviando}
+            className={`${CLASE_BOTON_NEUTRO_KIOSCO} w-full`}
+          >
+            <MapPin aria-hidden className="size-5" />
+            Agregar mi domicilio (opcional)
+          </button>
+        )}
+      </div>
 
       {error && (
         <p role="alert" className={CLASE_ERROR_KIOSCO}>

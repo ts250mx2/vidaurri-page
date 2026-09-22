@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { CapturaPartida } from "@/lib/mostrador/tipos";
 import type { PiezaDeVico } from "@/lib/kiosco/tipos";
+import { VisorPieza } from "@/components/VisorPieza";
+import { urlFotoNueva } from "@/lib/fotos";
 import { RenglonPieza, type FaseAgregar } from "./RenglonPieza";
 
 // Las piezas que Vico consultó en el turno, bajo su respuesta, con el botón
@@ -39,6 +41,8 @@ export function PiezasDeVico({
 }) {
   const [fases, setFases] = useState<Record<string, FaseAgregar>>({});
   const [errores, setErrores] = useState<Record<string, string>>({});
+  /** La pieza abierta en grande (`VisorPieza`); null = cerrado. */
+  const [ampliada, setAmpliada] = useState<PiezaDeVico | null>(null);
   // Los "Agregado ✓" se apagan solos; si el chat se reinicia antes, se limpian.
   const temporizadores = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
@@ -73,6 +77,29 @@ export function PiezasDeVico({
   }
 
   return (
+    <>
+    {ampliada && (
+      <VisorPieza
+        pieza={{
+          foto: ampliada.foto ?? (ampliada.origen === "nueva" ? urlFotoNueva(ampliada.codigo) : null),
+          codigo: ampliada.codigo,
+          descripcion: ampliada.descripcion,
+          precioConIva: ampliada.precioConIva,
+          existencia:
+            ampliada.origen === "usada" ? "Pieza única" : ampliada.hayEnTienda ? "En existencia" : "Sobre pedido",
+        }}
+        onCerrar={() => setAmpliada(null)}
+        accion={{
+          texto: "Agregar",
+          disabled: ocupado || hayAgregando || fases[claveDe(ampliada)] === "agregado",
+          onClick: () => {
+            const pieza = ampliada;
+            setAmpliada(null);
+            void agregar(pieza);
+          },
+        }}
+      />
+    )}
     <ul
       aria-label="Piezas que encontró Vico"
       className="mt-3 flex flex-col divide-y divide-linea border-t border-linea"
@@ -87,6 +114,8 @@ export function PiezasDeVico({
             precioConIva={pieza.precioConIva}
             hayEnTienda={pieza.hayEnTienda}
             foto={pieza.foto}
+            prioritaria
+            onAmpliar={() => setAmpliada(pieza)}
             fase={fases[clave] ?? "libre"}
             error={errores[clave] ?? null}
             bloqueado={ocupado || hayAgregando}
@@ -95,5 +124,6 @@ export function PiezasDeVico({
         );
       })}
     </ul>
+    </>
   );
 }

@@ -3,7 +3,7 @@
 import { forwardRef } from "react";
 import { twMerge } from "tailwind-merge";
 import clsx from "clsx";
-import { FotoPieza } from "@/components/FotoPieza";
+import { FotoAmpliable } from "@/components/VisorPieza";
 import { pesos } from "@/lib/formato";
 import { urlFotoNueva } from "@/lib/fotos";
 import { CLASE_BOTON_PLANO_KIOSCO } from "./estilos";
@@ -38,9 +38,18 @@ export interface PropsRenglonPieza {
   activo?: boolean;
   /** Se pinta la tecla Enter junto al botón: solo en la lista que navega con flechas. */
   conTeclaEnter?: boolean;
+  /**
+   * Foto con descarga inmediata (`loading="eager"`). Para los renglones que
+   * nacen ya a la vista: Chromium no dispara la carga diferida de una imagen
+   * que aparece en pantalla sin que nadie haga scroll, y la lista se quedaba
+   * con el ojo de la cámara hasta que el cliente movía la rueda.
+   */
+  prioritaria?: boolean;
   error?: string | null;
   onAgregar: () => void;
   onFoco?: () => void;
+  /** Tocar la foto: el padre abre la pieza en grande (`VisorPieza`). */
+  onAmpliar: () => void;
 }
 
 function textoDelBoton(fase: FaseAgregar): string {
@@ -61,9 +70,11 @@ export const RenglonPieza = forwardRef<HTMLButtonElement, PropsRenglonPieza>(
       bloqueado,
       activo = false,
       conTeclaEnter = false,
+      prioritaria = false,
       error,
       onAgregar,
       onFoco,
+      onAmpliar,
     },
     ref
   ) {
@@ -75,11 +86,13 @@ export const RenglonPieza = forwardRef<HTMLButtonElement, PropsRenglonPieza>(
           activo ? "border-l-ambar bg-papel" : "border-l-transparent"
         )}
       >
-        <FotoPieza
+        <FotoAmpliable
           src={foto ?? urlFotoNueva(codigo)}
           alt={descripcion}
-          className="mesa-dibujo size-20 shrink-0 overflow-hidden rounded-md border border-linea sm:size-24"
+          className="mesa-dibujo size-20 rounded-md border border-linea sm:size-24"
           imgClassName="size-full object-contain"
+          prioritaria={prioritaria}
+          onAmpliar={onAmpliar}
         />
         <div className="min-w-0">
           <p className="line-clamp-2 text-base font-semibold leading-snug text-tinta sm:text-lg">

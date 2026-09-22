@@ -4,6 +4,7 @@ import { notFound, redirect, unstable_rethrow } from "next/navigation";
 import { ChevronLeft, FileDown, Info, Printer } from "lucide-react";
 import clsx from "clsx";
 import { CancelarPedido } from "@/components/mostrador/CancelarPedido";
+import { textoDomicilio } from "@/lib/domicilio";
 import { pesos } from "@/lib/formato";
 import { obtenerPedido } from "@/lib/mostrador/datos";
 import {
@@ -281,6 +282,11 @@ export default async function PaginaPedido({ params }: Contexto) {
           <Dato etiqueta="Teléfono">
             <span className="num-tab font-mono">{telefonoLegible(pedido.telefono) || "—"}</span>
           </Dato>
+          {pedido.domicilio && (
+            <Dato etiqueta="Domicilio" className="col-span-2 sm:col-span-3">
+              {textoDomicilio(pedido.domicilio)}
+            </Dato>
+          )}
           <Dato etiqueta="Recoge en">
             {editable ? (
               <EdicionSucursal idPedido={pedido.id} sucursal={pedido.sucursal} />

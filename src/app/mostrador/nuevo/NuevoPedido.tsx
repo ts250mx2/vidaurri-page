@@ -17,6 +17,7 @@ import {
   sesionVencida,
   type RespuestaProxy,
 } from "@/lib/mostrador/navegador";
+import type { Domicilio } from "@/lib/domicilio";
 import type { CapturaPartida, PedidoDetalle, PerfilPos, SucursalEntrega } from "@/lib/mostrador/tipos";
 import { PanelBorrador } from "./PanelBorrador";
 import { PanelCliente } from "./PanelCliente";
@@ -165,9 +166,9 @@ export function NuevoPedido({ borradorInicial, perfil, vendedor, errorInicial }:
     return tomarPedido(respuesta, ERROR_QUITAR);
   }
 
-  async function enviarPedido(observaciones: string): ResultadoAccion {
+  async function enviarPedido(observaciones: string, domicilio: Domicilio | null): ResultadoAccion {
     const respuesta = await llamarProxy("/borrador/enviar", {
-      cuerpo: { observaciones: observaciones.trim() || null, sucursal },
+      cuerpo: { observaciones: observaciones.trim() || null, sucursal, domicilio },
     });
     if (sesionVencida(respuesta.status)) return null;
     const pedido = pedidoDe(respuesta.datos);

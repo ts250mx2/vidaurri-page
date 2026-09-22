@@ -2,8 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, Send, Store } from "lucide-react";
+import { ArrowLeft, Home, MapPin, Send, Store } from "lucide-react";
 import clsx from "clsx";
+import { FormularioDomicilio } from "@/components/domicilio/FormularioDomicilio";
 import { useArea } from "@/components/kiosco/AreaContext";
 import {
   CLASE_BOTON_AMBAR_KIOSCO,
@@ -12,6 +13,7 @@ import {
   CLASE_ETIQUETA_KIOSCO,
 } from "@/components/kiosco/estilos";
 import { NEGOCIO } from "@/config/negocio";
+import { DOMICILIO_VACIO, domicilioVacio, validarDomicilio, type Domicilio } from "@/lib/domicilio";
 import { esOk, llamarArea, mensajeFallo, sesionPerdida } from "@/lib/kiosco/navegador";
 import { sanearAcuse } from "@/lib/kiosco/tipos";
 import { SUCURSALES_ENTREGA, type SucursalEntrega } from "@/lib/mostrador/tipos";
@@ -50,6 +52,8 @@ export function DatosEnvio({
   const router = useRouter();
   const [sucursal, setSucursal] = useState<SucursalEntrega>(SUCURSALES_ENTREGA[0].clave);
   const [observaciones, setObservaciones] = useState("");
+  const [domicilio, setDomicilio] = useState<Domicilio>(DOMICILIO_VACIO);
+  const [conDomicilio, setConDomicilio] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -57,11 +61,17 @@ export function DatosEnvio({
     evento.preventDefault();
     if (enviando || !permitirPedido) return;
 
+    const validado = validarDomicilio(domicilio);
+    if (!validado.ok) {
+      setError(validado.error);
+      return;
+    }
+
     setEnviando(true);
     setError(null);
     const nota = observaciones.trim().slice(0, OBSERVACIONES_MAX);
     const respuesta = await llamarArea(area, "/borrador/enviar", {
-      cuerpo: { sucursal, ...(nota ? { observaciones: nota } : {}) },
+      cuerpo: { sucursal, ...(nota ? { observaciones: nota } : {}), domicilio: validado.domicilio },
     });
     if (sesionPerdida(area, respuesta)) return;
     const acuse = esOk(respuesta.datos) ? sanearAcuse(respuesta.datos) : null;
@@ -139,6 +149,27 @@ export function DatosEnvio({
             })}
           </div>
         </fieldset>
+
+        <div className="flex flex-col gap-3">
+          {conDomicilio || !domicilioVacio(domicilio) ? (
+            <>
+              <p className={CLASE_ETIQUETA_KIOSCO}>
+                Tu domicilio <span className="normal-case tracking-normal">(opcional)</span>
+              </p>
+              <FormularioDomicilio valor={domicilio} onChange={setDomicilio} disabled={enviando} estilo="kiosco" />
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConDomicilio(true)}
+              disabled={enviando}
+              className={`${CLASE_BOTON_NEUTRO_KIOSCO} w-full`}
+            >
+              <Home aria-hidden className="size-5" />
+              Agregar mi domicilio (opcional)
+            </button>
+          )}
+        </div>
 
         <div className="flex flex-col gap-2">
           <label htmlFor="observaciones-pedido" className={CLASE_ETIQUETA_KIOSCO}>

@@ -7,6 +7,7 @@ import { useArea } from "@/components/kiosco/AreaContext";
 import { CLASE_CAMPO_KIOSCO, CLASE_ERROR_KIOSCO } from "@/components/kiosco/estilos";
 import { RenglonPieza, type FaseAgregar } from "@/components/kiosco/RenglonPieza";
 import { Tecla } from "@/components/kiosco/Tecla";
+import { VisorPieza } from "@/components/VisorPieza";
 import { urlFotoNueva } from "@/lib/fotos";
 import {
   arregloDe,
@@ -40,6 +41,8 @@ const MIN_BUSQUEDA = 2;
 const BUSQUEDA_MAX = 60;
 /** Es la pantalla de buscar, no una lista corta: caben más que los 20 de IA. */
 const LIMITE = 60;
+/** Renglones que nacen a la vista: su foto va con descarga inmediata (ver `RenglonPieza`). */
+const A_LA_VISTA = 6;
 /** Lo que dura el "Agregado ✓" antes de volver a ofrecer el botón. */
 const MOSTRAR_AGREGADO_MS = 2000;
 const ERROR_BUSQUEDA = "No pude buscar en el catálogo; inténtalo otra vez";
@@ -64,6 +67,8 @@ export function BuscadorKiosco({
   const [fases, setFases] = useState<Record<string, FaseAgregar>>({});
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [activo, setActivo] = useState(-1);
+  /** La pieza abierta en grande (`VisorPieza`); null = cerrado. */
+  const [ampliada, setAmpliada] = useState<ArticuloKiosco | null>(null);
   /** Sube con cada Enter: reejecuta la búsqueda aunque el texto no haya cambiado. */
   const [disparo, setDisparo] = useState(0);
 
@@ -249,6 +254,27 @@ export function BuscadorKiosco({
 
   return (
     <div className="lamina flex h-full flex-col overflow-hidden">
+      {ampliada && (
+        <VisorPieza
+          pieza={{
+            foto: urlFotoNueva(ampliada.fotoArchivo ?? ampliada.codigo),
+            codigo: ampliada.codigo,
+            descripcion: ampliada.descripcion,
+            precioConIva: ampliada.precioConIva,
+            existencia: ampliada.hayEnTienda ? "En existencia" : "Sobre pedido",
+          }}
+          onCerrar={() => setAmpliada(null)}
+          accion={{
+            texto: "Agregar",
+            disabled: ocupado || hayAgregando || fases[ampliada.codigo] === "agregado",
+            onClick: () => {
+              const articulo = ampliada;
+              setAmpliada(null);
+              void agregar(articulo);
+            },
+          }}
+        />
+      )}
       <div className="border-b border-linea bg-hoja px-4 py-3 sm:px-5 sm:py-4">
         <label htmlFor="busqueda-kiosco" className="rotulo-tecnico text-sm text-tinta-suave">
           Busca tu pieza
@@ -343,7 +369,9 @@ export function BuscadorKiosco({
                 bloqueado={ocupado || hayAgregando}
                 activo={activo === i}
                 conTeclaEnter={area.conTeclado}
+                prioritaria={i < A_LA_VISTA}
                 onFoco={() => setActivo(i)}
+                onAmpliar={() => setAmpliada(articulo)}
                 onAgregar={() => void agregar(articulo)}
               />
             ))}

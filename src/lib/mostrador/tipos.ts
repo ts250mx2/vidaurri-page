@@ -125,6 +125,20 @@ export interface PedidoResumen {
   bkoPosError?: string | null;
   /** 'MARTES' | 'VIERNES': el día en que Aldo entrega. */
   bkoPosCompromiso?: string | null;
+  /**
+   * Domicilio del cliente, si lo dio al enviar (calle y número, colonia, CP,
+   * municipio, estado). Opcional mientras IA termina de mandarlo.
+   */
+  domicilio?: Domicilio | null;
+}
+
+/** Copia de `Domicilio` de IA; la versión con validación vive en `@/lib/domicilio`. */
+export interface Domicilio {
+  calle: string;
+  colonia: string;
+  cp: string;
+  municipio: string;
+  estado: string;
 }
 
 export interface PedidoDetalle extends PedidoResumen {

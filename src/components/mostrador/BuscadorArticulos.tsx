@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { FotoPieza } from "@/components/FotoPieza";
+import { FotoAmpliable, VisorPieza } from "@/components/VisorPieza";
 import { CLASE_BOTON_PLANO, CLASE_CAMPO, CLASE_ERROR, CLASE_ETIQUETA } from "@/components/mostrador/estilos";
 import { CANTIDAD_MIN, Stepper } from "@/components/mostrador/Stepper";
 import { pesos } from "@/lib/formato";
@@ -57,6 +57,8 @@ const ERROR_BUSQUEDA = "No fue posible buscar en el catálogo";
 const TEXTO_AGREGAR = "Agregar";
 const TEXTO_AGREGANDO = "Agregando…";
 const TEXTO_AGREGADO = "Agregado ✓";
+/** Renglones que nacen a la vista: su foto va con descarga inmediata (Chromium no dispara la carga diferida sin scroll). */
+const A_LA_VISTA = 6;
 
 export function BuscadorArticulos({ titulo, ayuda, idCliente, ocupado, onAgregar, limite, alto }: PropsBuscadorArticulos) {
   const [busqueda, setBusqueda] = useState("");
@@ -66,6 +68,8 @@ export function BuscadorArticulos({ titulo, ayuda, idCliente, ocupado, onAgregar
   const [error, setError] = useState<string | null>(null);
   const [agregando, setAgregando] = useState<string | null>(null);
   const [agregado, setAgregado] = useState<string | null>(null);
+  /** La pieza abierta en grande (`VisorPieza`); null = cerrado. */
+  const [ampliada, setAmpliada] = useState<ArticuloParaPedido | null>(null);
   // El "Agregado ✓" se apaga solo; si el bloque se desmonta antes, se limpia.
   const temporizadores = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
@@ -137,6 +141,28 @@ export function BuscadorArticulos({ titulo, ayuda, idCliente, ocupado, onAgregar
 
   return (
     <div className="lamina flex flex-col gap-3 p-4">
+      {ampliada && (
+        <VisorPieza
+          pieza={{
+            foto: ampliada.foto ? urlFotoNueva(ampliada.foto) : null,
+            codigo: ampliada.codigo,
+            descripcion: ampliada.descripcion,
+            marca: ampliada.marca,
+            precioConIva: ampliada.precioConIva,
+            existencia: ampliada.existencia > 0 ? `En existencia: ${ampliada.existencia}` : "Sin existencia",
+          }}
+          onCerrar={() => setAmpliada(null)}
+          accion={{
+            texto: TEXTO_AGREGAR,
+            disabled: bloqueado || agregado === ampliada.codigo,
+            onClick: () => {
+              const { codigo } = ampliada;
+              setAmpliada(null);
+              void agregar(codigo);
+            },
+          }}
+        />
+      )}
       <div>
         <p className={CLASE_ETIQUETA}>{titulo}</p>
         <p className="mt-1 text-xs text-tinta-suave">{ayuda}</p>
@@ -171,17 +197,19 @@ export function BuscadorArticulos({ titulo, ayuda, idCliente, ocupado, onAgregar
           {!buscando && !error && resultados.length === 0 && (
             <li className="px-3 py-2 text-sm text-tinta-suave">Nada con ese dato en bdav; pregúntale a Vico.</li>
           )}
-          {resultados.map((a) => {
+          {resultados.map((a, i) => {
             const hayExistencia = a.existencia > 0;
             const recienAgregado = agregado === a.codigo;
             return (
               <li key={a.codigo} className="flex flex-col gap-2 px-3 py-2.5">
                 <div className="flex min-w-0 gap-3">
-                  <FotoPieza
+                  <FotoAmpliable
                     src={a.foto ? urlFotoNueva(a.foto) : null}
-                    alt={`Foto de ${a.descripcion}`}
-                    className="trama-anaquel size-20 shrink-0 rounded-sm border border-linea"
+                    alt={a.descripcion}
+                    className="trama-anaquel size-20 rounded-sm border border-linea"
                     imgClassName="p-1"
+                    prioritaria={i < A_LA_VISTA}
+                    onAmpliar={() => setAmpliada(a)}
                   />
                   <div className="min-w-0 flex-1">
                     <p className="num-tab font-mono text-xs text-tinta-suave">

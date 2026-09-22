@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import autoTable, { type CellHookData } from "jspdf-autotable";
 import QRCode from "qrcode";
 import { NEGOCIO } from "@/config/negocio";
+import { textoDomicilio } from "@/lib/domicilio";
 import { codificarCodigo128, ZONA_SILENCIO } from "./codigo128";
 import { ETIQUETA_CANAL, ETIQUETA_ORIGEN, fechaHora, telefonoLegible } from "./etiquetas";
 import { logoPng } from "./logo-png";
@@ -248,6 +249,11 @@ function camposDelPedido(hoja: HojaSurtido): Campo[] {
       valor: hoja.sucursal.nombre,
       aviso: hoja.trasladar ? `Trasladar a ${hoja.sucursal.nombre}` : undefined,
     },
+    // El domicilio, si lo dieron, en un renglón entero: es largo y es lo que
+    // el repartidor o quien llame necesita leer de corrido.
+    ...(pedido.domicilio
+      ? [{ etiqueta: "Domicilio", valor: textoDomicilio(pedido.domicilio), columnas: 4 }]
+      : []),
     { etiqueta: "Canal", valor: ETIQUETA_CANAL[pedido.canal] },
     { etiqueta: "Capturó", valor: pedido.capturadoPor ?? "cliente", mono: true },
     { etiqueta: "Estatus", valor: ETIQUETA_ESTATUS[pedido.estatus] },

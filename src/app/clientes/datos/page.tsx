@@ -7,7 +7,7 @@ import type { PedidoKiosco } from "@/lib/kiosco/tipos";
 import { DatosEnvio } from "./DatosEnvio";
 
 // Paso 2 del área de clientes: el pedido ya va a su nombre, así que lo único
-// que falta es dónde lo recoge (Matriz o Sucursal Fierro) y, si quiere, una
+// que falta es dónde lo recoge (Mostrador o Ruta) y, si quiere, una
 // nota. El resumen se relee de IA en el servidor para que lo que confirma sea
 // exactamente lo que el mostrador va a recibir. Sin piezas no hay nada que
 // enviar y se regresa a armar.

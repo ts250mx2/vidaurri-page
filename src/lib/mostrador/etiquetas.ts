@@ -20,14 +20,14 @@ export const ETIQUETA_CANAL: Readonly<Record<CanalPedido, string>> = {
 };
 
 export const ETIQUETA_SUCURSAL: Readonly<Record<SucursalEntrega, string>> = {
-  matriz: "Matriz",
-  fierro: "Sucursal Fierro",
+  matriz: "Mostrador",
+  fierro: "Ruta",
 };
 
 /** La sucursal en una palabra, para celdas angostas con icono al lado; el nombre completo va en el title. */
 export const ETIQUETA_SUCURSAL_CORTA: Readonly<Record<SucursalEntrega, string>> = {
-  matriz: "Matriz",
-  fierro: "Fierro",
+  matriz: "Mostrador",
+  fierro: "Ruta",
 };
 
 export const ETIQUETA_ORIGEN: Readonly<Record<OrigenPartida, string>> = {

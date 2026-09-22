@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import clsx from "clsx";
 import { cpTecleado, DOMICILIO_MAX, esCpCompleto, type Domicilio } from "@/lib/domicilio";
+import { telefonoTecleado } from "@/lib/kiosco/identidad";
 
 // El domicilio del cliente, con el catálogo de Correos de México detrás
 // (`/api/cp`). El orden es el de la vida real: primero el código postal, y
@@ -247,7 +248,7 @@ export function FormularioDomicilio({ valor, onChange, disabled = false, estilo 
           </select>
         </div>
 
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
+        <div className="flex flex-col gap-1.5">
           <label htmlFor={`${id}-colonia`} className={c.etiqueta}>
             Colonia
           </label>
@@ -303,6 +304,25 @@ export function FormularioDomicilio({ valor, onChange, disabled = false, estilo 
               Mejor elegirla de la lista
             </button>
           )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor={`${id}-telefono`} className={c.etiqueta}>
+            Teléfono de contacto
+          </label>
+          <input
+            id={`${id}-telefono`}
+            type="tel"
+            inputMode="numeric"
+            value={valor.telefono ?? ""}
+            onChange={(e) => cambiar({ telefono: telefonoTecleado(e.target.value) || null })}
+            placeholder="81 1234 5678"
+            maxLength={12}
+            autoComplete="tel-national"
+            disabled={disabled}
+            className={clsx(c.campo, "num-tab font-mono")}
+          />
+          <p className={c.nota}>Quien recibe en ese domicilio; 10 dígitos. Opcional.</p>
         </div>
       </div>
     </div>

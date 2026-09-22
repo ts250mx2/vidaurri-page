@@ -20,8 +20,10 @@ export type EstatusPartida = "pendiente" | "confirmada" | "sin_existencia" | "so
 export type PerfilPos = "Administrador" | "Operaciones" | "Ventas";
 
 export const SUCURSALES_ENTREGA: ReadonlyArray<{ clave: SucursalEntrega; nombre: string }> = [
-  { clave: "matriz", nombre: "Matriz" },
-  { clave: "fierro", nombre: "Sucursal Fierro" },
+  // Las claves se quedan (matriz / fierro: así están en la base y en el POS);
+  // los nombres son como el mostrador habla de ellas en los pedidos.
+  { clave: "matriz", nombre: "Mostrador" },
+  { clave: "fierro", nombre: "Ruta" },
 ];
 
 export interface PartidaPedido {
@@ -139,6 +141,8 @@ export interface Domicilio {
   cp: string;
   municipio: string;
   estado: string;
+  /** Teléfono de contacto en ese domicilio (10 dígitos); null si no lo dieron. */
+  telefono: string | null;
 }
 
 export interface PedidoDetalle extends PedidoResumen {

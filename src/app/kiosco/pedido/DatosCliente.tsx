@@ -25,7 +25,7 @@ import {
   llamarKiosco,
   mensajeFallo,
 } from "@/lib/kiosco/navegador";
-import { DOMICILIO_VACIO, domicilioVacio, validarDomicilio, type Domicilio } from "@/lib/domicilio";
+import { DOMICILIO_VACIO, domicilioVacio, resumenDomicilio, validarDomicilio, type Domicilio } from "@/lib/domicilio";
 import { RUTA_KIOSCO, RUTA_KIOSCO_ENTRAR, RUTA_KIOSCO_LISTO } from "@/lib/kiosco/rutas";
 import { sanearAcuse } from "@/lib/kiosco/tipos";
 
@@ -198,23 +198,21 @@ export function DatosCliente({ cliente }: { cliente: Datos | null }) {
       )}
 
       <div className="flex flex-col gap-3">
-        {conDomicilio || !domicilioVacio(domicilio) ? (
-          <>
-            <p className={CLASE_ETIQUETA_KIOSCO}>
-              Tu domicilio <span className="normal-case tracking-normal">(opcional)</span>
-            </p>
-            <FormularioDomicilio valor={domicilio} onChange={setDomicilio} disabled={enviando} estilo="kiosco" />
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConDomicilio(true)}
-            disabled={enviando}
-            className={`${CLASE_BOTON_NEUTRO_KIOSCO} w-full`}
-          >
-            <MapPin aria-hidden className="size-5" />
-            Agregar mi domicilio (opcional)
-          </button>
+        <button
+          type="button"
+          onClick={() => setConDomicilio((v) => !v)}
+          disabled={enviando}
+          aria-expanded={conDomicilio}
+          className={`${CLASE_BOTON_NEUTRO_KIOSCO} w-full`}
+        >
+          <MapPin aria-hidden className="size-5" />
+          {conDomicilio ? "Ocultar mi domicilio" : domicilioVacio(domicilio) ? "Agregar mi domicilio (opcional)" : "Editar mi domicilio"}
+        </button>
+        {!conDomicilio && !domicilioVacio(domicilio) && (
+          <p className="text-sm leading-relaxed text-tinta">{resumenDomicilio(domicilio)}</p>
+        )}
+        {conDomicilio && (
+          <FormularioDomicilio valor={domicilio} onChange={setDomicilio} disabled={enviando} estilo="kiosco" />
         )}
       </div>
 

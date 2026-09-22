@@ -13,7 +13,7 @@ import {
   CLASE_ETIQUETA_KIOSCO,
 } from "@/components/kiosco/estilos";
 import { NEGOCIO } from "@/config/negocio";
-import { DOMICILIO_VACIO, domicilioVacio, validarDomicilio, type Domicilio } from "@/lib/domicilio";
+import { DOMICILIO_VACIO, domicilioVacio, resumenDomicilio, validarDomicilio, type Domicilio } from "@/lib/domicilio";
 import { esOk, llamarArea, mensajeFallo, sesionPerdida } from "@/lib/kiosco/navegador";
 import { sanearAcuse } from "@/lib/kiosco/tipos";
 import { SUCURSALES_ENTREGA, type SucursalEntrega } from "@/lib/mostrador/tipos";
@@ -33,9 +33,12 @@ import { SUCURSALES_ENTREGA, type SucursalEntrega } from "@/lib/mostrador/tipos"
 const OBSERVACIONES_MAX = 300;
 const ERROR_ENVIAR = "No pude mandar tu pedido; inténtalo otra vez";
 
-/** La dirección de `negocio.ts` por nombre de sucursal; la ciudad si no coincide. */
-function direccionDe(nombre: string): string {
-  return NEGOCIO.sucursales.find((s) => s.nombre === nombre)?.direccion ?? NEGOCIO.ciudad;
+/** Cómo se llama cada sucursal en `negocio.ts` (el sitio público), que no es como se nombra en los pedidos. */
+const NOMBRE_PUBLICO: Readonly<Record<SucursalEntrega, string>> = { matriz: "Matriz", fierro: "Sucursal Fierro" };
+
+/** La dirección de `negocio.ts` de la sucursal; la ciudad si no coincide. */
+function direccionDe(clave: SucursalEntrega): string {
+  return NEGOCIO.sucursales.find((s) => s.nombre === NOMBRE_PUBLICO[clave])?.direccion ?? NEGOCIO.ciudad;
 }
 
 const CLASE_TEXTAREA =
@@ -142,7 +145,7 @@ export function DatosEnvio({
                   </span>
                   <span className="min-w-0">
                     <span className="rotulo-tecnico block text-base text-tinta">{s.nombre}</span>
-                    <span className="block text-sm leading-snug text-tinta-suave">{direccionDe(s.nombre)}</span>
+                    <span className="block text-sm leading-snug text-tinta-suave">{direccionDe(s.clave)}</span>
                   </span>
                 </label>
               );
@@ -151,23 +154,21 @@ export function DatosEnvio({
         </fieldset>
 
         <div className="flex flex-col gap-3">
-          {conDomicilio || !domicilioVacio(domicilio) ? (
-            <>
-              <p className={CLASE_ETIQUETA_KIOSCO}>
-                Tu domicilio <span className="normal-case tracking-normal">(opcional)</span>
-              </p>
-              <FormularioDomicilio valor={domicilio} onChange={setDomicilio} disabled={enviando} estilo="kiosco" />
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConDomicilio(true)}
-              disabled={enviando}
-              className={`${CLASE_BOTON_NEUTRO_KIOSCO} w-full`}
-            >
-              <Home aria-hidden className="size-5" />
-              Agregar mi domicilio (opcional)
-            </button>
+          <button
+            type="button"
+            onClick={() => setConDomicilio((v) => !v)}
+            disabled={enviando}
+            aria-expanded={conDomicilio}
+            className={`${CLASE_BOTON_NEUTRO_KIOSCO} w-full`}
+          >
+            <Home aria-hidden className="size-5" />
+            {conDomicilio ? "Ocultar mi domicilio" : domicilioVacio(domicilio) ? "Agregar mi domicilio (opcional)" : "Editar mi domicilio"}
+          </button>
+          {!conDomicilio && !domicilioVacio(domicilio) && (
+            <p className="text-sm leading-relaxed text-tinta">{resumenDomicilio(domicilio)}</p>
+          )}
+          {conDomicilio && (
+            <FormularioDomicilio valor={domicilio} onChange={setDomicilio} disabled={enviando} estilo="kiosco" />
           )}
         </div>
 

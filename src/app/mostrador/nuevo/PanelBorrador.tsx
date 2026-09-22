@@ -12,7 +12,7 @@ import {
   CLASE_ETIQUETA,
 } from "@/components/mostrador/estilos";
 import { Stepper } from "@/components/mostrador/Stepper";
-import { DOMICILIO_VACIO, domicilioVacio, validarDomicilio, type Domicilio } from "@/lib/domicilio";
+import { DOMICILIO_VACIO, domicilioVacio, resumenDomicilio, validarDomicilio, type Domicilio } from "@/lib/domicilio";
 import { pesos } from "@/lib/formato";
 import { urlFotoNueva, urlFotoUsada } from "@/lib/fotos";
 import { OBSERVACIONES_MAX } from "@/lib/mostrador/reglas";
@@ -215,18 +215,22 @@ export function PanelBorrador({
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3">
             <p className={CLASE_ETIQUETA}>Domicilio del cliente (opcional)</p>
-            {!(conDomicilio || !domicilioVacio(domicilio)) && (
-              <button
-                type="button"
-                onClick={() => setConDomicilio(true)}
-                disabled={bloqueado}
-                className="text-xs font-semibold text-tinta underline underline-offset-4"
-              >
-                Capturar domicilio
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setConDomicilio((v) => !v)}
+              disabled={bloqueado}
+              aria-expanded={conDomicilio}
+              className="text-xs font-semibold text-tinta underline underline-offset-4"
+            >
+              {conDomicilio ? "Ocultar" : domicilioVacio(domicilio) ? "Capturar domicilio" : "Editar"}
+            </button>
           </div>
-          {(conDomicilio || !domicilioVacio(domicilio)) && (
+          {/* Colapsado con algo tecleado: se enseña lo que hay, para que no se
+              mande un domicilio a medias sin verlo. */}
+          {!conDomicilio && !domicilioVacio(domicilio) && (
+            <p className="text-xs leading-relaxed text-tinta">{resumenDomicilio(domicilio)}</p>
+          )}
+          {conDomicilio && (
             <FormularioDomicilio valor={domicilio} onChange={setDomicilio} disabled={bloqueado} estilo="mostrador" />
           )}
         </div>
